@@ -41,7 +41,7 @@ export function AppSidebar() {
     ...(isAdmin ? [{ title: "Profissionais", url: "/admin/profissionais", icon: UserCog, protected: false }] : []),
     { title: "Visualização 3D", url: "/visualizacao", icon: LayoutDashboard, protected: true },
     { title: "Nova Análise", url: "/nova-analise", icon: Footprints, protected: true },
-    { title: "Relatórios", url: "/historico", icon: History, protected: true },
+    { title: "Relatórios", url: "/relatorio", icon: History, protected: true },
     { title: "Configurações", url: "/configuracoes", icon: Settings, protected: false },
   ];
 

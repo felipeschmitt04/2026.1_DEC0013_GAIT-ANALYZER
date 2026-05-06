@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, X, User, Search, Calendar, Weight, Edit3, CheckCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Plus, X, User, Search, Calendar, Weight, Edit3, CheckCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -39,31 +39,36 @@ export default function PacientesPage() {
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [pacienteSelecionado, setPacienteSelecionado] = useState<Paciente | null>(null)
   const [pacientes, setPacientes] = useState<Paciente[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
   
+  // Contexto do Paciente para controle global
+  const { pacienteAtivo, setPacienteAtivo } = usePaciente()
+
   // --- ESTADOS DE BUSCA E PAGINAÇÃO ---
   const [busca, setBusca] = useState("")
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const pacientesPorPagina = 1 
+  const pacientesPorPagina = 12
 
-  //Filtra pelo nome digitado
+  // Verifica permissão de Admin via Cookie
+  useEffect(() => {
+    const checkAdmin = document.cookie.includes("user-role=admin");
+    setIsAdmin(checkAdmin);
+  }, []);
+
+  // Filtros e Ordenação
   const pacientesFiltrados = pacientes.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
   )
 
-  //  Ordena o resultado do filtro
   const pacientesOrdenados = [...pacientesFiltrados].sort((a, b) =>
     a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
   )
 
-  // Calcula baseado no que sobrou após o filtro
   const totalPaginas = Math.ceil(pacientesOrdenados.length / pacientesPorPagina)
   const indiceUltimo = paginaAtual * pacientesPorPagina
   const indicePrimeiro = indiceUltimo - pacientesPorPagina
   const pacientesExibidos = pacientesOrdenados.slice(indicePrimeiro, indiceUltimo)
 
-  const { setPacienteAtivo } = usePaciente()
-
-  // Resetar para a página 1 sempre que o usuário digitar algo novo
   const handleBusca = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBusca(e.target.value)
     setPaginaAtual(1)
@@ -88,11 +93,18 @@ export default function PacientesPage() {
     e.preventDefault()
     if (!pacienteSelecionado) return
     const formData = new FormData(e.currentTarget)
+    
+    // Se mudar o nome do paciente que está ativo, precisamos atualizar o contexto também
+    const novoNome = formData.get("nome") as string;
+    if (pacienteAtivo === pacienteSelecionado.nome) {
+        setPacienteAtivo(novoNome);
+    }
+
     const listaAtualizada = pacientes.map(p => {
       if (p.id === pacienteSelecionado.id) {
         return {
           ...p,
-          nome: formData.get("nome") as string,
+          nome: novoNome,
           nascimento: formData.get("nascimento") as string,
           genero: formData.get("genero") as string,
           peso: formData.get("peso") as string,
@@ -104,6 +116,23 @@ export default function PacientesPage() {
     setPacientes(listaAtualizada)
     setPacienteSelecionado(null)
   }
+
+  const handleDeletePaciente = () => {
+    if (!pacienteSelecionado) return;
+    
+    const confirmar = window.confirm(`ATENÇÃO: Deseja realmente excluir permanentemente o prontuário de ${pacienteSelecionado.nome}?`);
+    
+    if (confirmar) {
+      // LÓGICA DE SEGURANÇA: Se o paciente deletado for o ativo, bloqueia o sistema
+      if (pacienteAtivo === pacienteSelecionado.nome) {
+        setPacienteAtivo(""); // Limpa o paciente ativo (tranca a sidebar e páginas)
+        localStorage.removeItem("paciente_selecionado");
+      }
+
+      setPacientes(pacientes.filter(p => p.id !== pacienteSelecionado.id));
+      setPacienteSelecionado(null);
+    }
+  };
 
   return (
     <div style={{ padding: '24px', position: 'relative' }}>
@@ -156,87 +185,48 @@ export default function PacientesPage() {
           ))
         ) : (
           <div className="col-span-full py-20 text-center text-slate-400">
-            Nenhum paciente encontrado com esse nome.
+            Nenhum paciente encontrado.
           </div>
         )}
       </div>
 
-      {/* --- PAGINAÇÃO DINÂMICA --- */}
+      {/* PAGINAÇÃO */}
       {totalPaginas > 1 && (
         <div style={{ marginTop: '32px' }}>
           <Pagination>
             <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (paginaAtual > 1) setPaginaAtual(paginaAtual - 1);
-                  }} 
-                  className={paginaAtual === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {(() => {
-                const itens = [];
-                const vizinhos = 1;
-
-                for (let i = 1; i <= totalPaginas; i++) {
-                  const ehInicio = i <= 2;
-                  const ehFim = i > totalPaginas - 2;
-                  const ehVizinhodaAtual = i >= paginaAtual - vizinhos && i <= paginaAtual + vizinhos;
-
-                  if (ehInicio || ehFim || ehVizinhodaAtual) {
-                    itens.push(
-                      <PaginationItem key={i}>
+                <PaginationItem>
+                    <PaginationPrevious 
+                        href="#" 
+                        onClick={(e) => { e.preventDefault(); if (paginaAtual > 1) setPaginaAtual(paginaAtual - 1); }} 
+                        className={paginaAtual === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"}
+                    />
+                </PaginationItem>
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(i => (
+                    <PaginationItem key={i}>
                         <PaginationLink 
-                          href="#" 
-                          isActive={paginaAtual === i}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setPaginaAtual(i);
-                          }}
-                          className={
-                            paginaAtual === i 
-                              ? "bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900 transition-colors cursor-default" 
-                              : "cursor-pointer hover:bg-slate-100"
-                          }
+                            href="#" 
+                            isActive={paginaAtual === i}
+                            onClick={(e) => { e.preventDefault(); setPaginaAtual(i); }}
+                            className={paginaAtual === i ? "bg-slate-900 text-white" : "cursor-pointer"}
                         >
-                          {i}
+                            {i}
                         </PaginationLink>
-                      </PaginationItem>
-                    );
-                  } 
-                  else if (
-                    i === paginaAtual - vizinhos - 1 || 
-                    i === paginaAtual + vizinhos + 1
-                  ) {
-                    itens.push(
-                      <PaginationItem key={i}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    );
-                  }
-                }
-                return itens;
-              })()}
-
-              <PaginationItem>
-                <PaginationNext 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (paginaAtual < totalPaginas) setPaginaAtual(paginaAtual + 1);
-                  }} 
-                  className={paginaAtual === totalPaginas ? "opacity-50 pointer-events-none" : "cursor-pointer"}
-                />
-              </PaginationItem>
+                    </PaginationItem>
+                ))}
+                <PaginationItem>
+                    <PaginationNext 
+                        href="#" 
+                        onClick={(e) => { e.preventDefault(); if (paginaAtual < totalPaginas) setPaginaAtual(paginaAtual + 1); }} 
+                        className={paginaAtual === totalPaginas ? "opacity-50 pointer-events-none" : "cursor-pointer"}
+                    />
+                </PaginationItem>
             </PaginationContent>
           </Pagination>
         </div>
       )}
 
-      {/* MODAL DE CADASTRO */}
+      {/* MODAL CADASTRO */}
       {showModalCadastro && (
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
           <div onClick={() => setShowModalCadastro(false)} style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(8px)' }} />
@@ -274,17 +264,17 @@ export default function PacientesPage() {
         </div>
       )}
 
-      {/* MODAL DE ALTERAR/SELECIONAR */}
+      {/* MODAL DE ALTERAR/SELECIONAR/DELETAR */}
       {pacienteSelecionado && (
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
           <div onClick={() => setPacienteSelecionado(null)} style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(8px)' }} />
-          <div style={{ position: 'relative', backgroundColor: 'white', width: '100%', maxWidth: '480px', borderRadius: '24px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <div style={{ position: 'relative', backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '24px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <button onClick={() => setPacienteSelecionado(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: '#94a3b8' }}><X size={20} /></button>
             <form onSubmit={handleUpdate}>
               <FieldGroup>
                 <FieldSet>
                   <FieldLegend style={{ fontSize: '18px', fontWeight: 'bold' }}>Dados do Paciente</FieldLegend>
-                  <FieldDescription>Edite as informações ou selecione o prontuário.</FieldDescription>
+                  <FieldDescription>Visualize ou modifique as informações do prontuário.</FieldDescription>
                   <FieldGroup style={{ marginTop: '16px' }}>
                     <Field><FieldLabel>Nome</FieldLabel><Input name="nome" defaultValue={pacienteSelecionado.nome} className="h-10" /></Field>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
@@ -302,19 +292,38 @@ export default function PacientesPage() {
                     <Field style={{ marginTop: '12px' }}><FieldLabel>Observações</FieldLabel><Textarea name="observacoes" defaultValue={pacienteSelecionado.observacoes} style={{ minHeight: '80px' }} /></Field>
                   </FieldGroup>
                 </FieldSet>
+
                 <FieldSeparator style={{ margin: '20px 0' }} />
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <Button type="submit" variant="outline" className="flex-1 h-12 rounded-xl text-slate-600 border-slate-200 gap-2 font-semibold active:scale-95 transition-all">
+                
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {/* ALTERAR (Branco/Outline) */}
+                  <Button 
+                    type="submit" 
+                    variant="outline" 
+                    className="flex-1 h-12 rounded-xl text-slate-600 border-slate-200 gap-2 font-semibold active:scale-95 transition-all"
+                  >
                     <Edit3 size={18} /> Alterar
                   </Button>
                   
+                  {/* DELETAR (Vermelho - Só Admin) */}
+                  {isAdmin && (
+                    <Button 
+                      type="button" 
+                      onClick={handleDeletePaciente}
+                      className="bg-red-600 hover:bg-red-700 text-white flex-1 h-12 rounded-xl font-bold gap-2 active:scale-95 transition-all"
+                    >
+                      <Trash2 size={18} /> Deletar
+                    </Button>
+                  )}
+
+                  {/* SELECIONAR (Verde/Esmeralda) */}
                   <Button 
                     type="button" 
                     onClick={() => {
                         setPacienteAtivo(pacienteSelecionado.nome);
                         setPacienteSelecionado(null);
                     }} 
-                    className="bg-emerald-600 flex-1 h-12 rounded-xl font-bold gap-2 active:scale-95 transition-all text-white"
+                    className="bg-emerald-600 hover:bg-emerald-700 flex-1 h-12 rounded-xl font-bold gap-2 active:scale-95 transition-all text-white"
                   >
                     <CheckCircle size={18} /> Selecionar
                   </Button>
