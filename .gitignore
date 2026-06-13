@@ -26,6 +26,7 @@ secrets.json
 # OS and editors
 .DS_Store
 ._*
+*:Zone.Identifier
 .vscode/
 .idea/
 *.swp

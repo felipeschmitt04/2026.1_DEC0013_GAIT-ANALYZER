@@ -8,6 +8,7 @@ from app.schemas.input import InputSummary, QualityInfo
 from app.schemas.job import JobInfo
 from app.schemas.result import BiomechanicalData, ResultV1
 from app.services.clinical_metrics import calculate_clinical_metrics
+from app.services.fitting_metadata import build_fitting_payload
 from app.services.skeleton import get_pose3d_skeleton_info
 from app.services.video_metadata import get_metadata
 
@@ -89,6 +90,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None):
                 kinematics=raw_data["kinematics"],
                 pose3d=raw_data["pose3d"],
                 skeleton=get_pose3d_skeleton_info(),
+                fitting=build_fitting_payload(raw_data["kinematics"]),
                 metricas_clinicas=calculate_clinical_metrics(raw_data["pose3d"]),
                 video_3d=None,
             )

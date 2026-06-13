@@ -43,8 +43,7 @@ class MockGaitAnalysisEngine:
             "pose3d": pose3d,
             "events": [[0.0] * 8 for _ in range(frame_count)],
             "kinematics": {
-                "angles": [[0.0] * 10 for _ in range(frame_count)],
+                "angles": [[0.0] * 40 for _ in range(frame_count)],
                 "timestamps": timestamps,
             },
         }
-
