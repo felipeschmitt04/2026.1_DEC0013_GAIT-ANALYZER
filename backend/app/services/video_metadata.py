@@ -21,8 +21,8 @@ def get_metadata(file_path):
         if fps < 30:
             warnings.append("WARNING_101_LOW_FPS")
 
-        width = int(cap.get(cv2.CAP_PROP_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_HEIGHT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if width < 400 or height < 400:
             warnings.append("WARNING_103_LOW_RES")
 
@@ -45,4 +45,3 @@ def get_metadata(file_path):
         }
     finally:
         cap.release()
-

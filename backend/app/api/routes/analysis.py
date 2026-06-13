@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
 from app.core.engine import get_engine
@@ -39,7 +40,7 @@ def _read_json(path: Path):
         return json.load(file)
 
 
-def _store_generated_artifacts(result_dir: Path) -> dict:
+def _store_generated_artifacts(result_dir: Path, job_id: str) -> dict:
     artifacts = {}
 
     for filename, key in (
@@ -51,7 +52,7 @@ def _store_generated_artifacts(result_dir: Path) -> dict:
             result_dir.mkdir(parents=True, exist_ok=True)
             target = result_dir / filename
             shutil.move(str(source), str(target))
-            artifacts[key] = str(target)
+            artifacts[key] = f"/results/{job_id}/artifacts/{filename}"
 
     return artifacts
 
@@ -61,6 +62,9 @@ async def analyze_video(
     video: UploadFile = File(...),
     height_mm: int = Form(...),
 ):
+    if height_mm <= 0:
+        raise HTTPException(status_code=422, detail="height_mm deve ser maior que zero")
+
     settings = get_settings()
     job_id = str(uuid4())
     upload_dir = settings.upload_dir / job_id
@@ -86,7 +90,7 @@ async def analyze_video(
         job_id=job_id,
     )
 
-    artifacts = _store_generated_artifacts(result_dir)
+    artifacts = _store_generated_artifacts(result_dir, job_id)
     if result.data is not None and artifacts:
         result.data.artifacts = artifacts
         if "video_3d" in artifacts:
@@ -122,3 +126,18 @@ async def get_result(job_id: str):
         raise HTTPException(status_code=404, detail="Resultado não encontrado")
 
     return _read_json(result_path)
+
+
+@router.get("/results/{job_id}/artifacts/{filename}")
+async def get_result_artifact(job_id: str, filename: str):
+    allowed_filenames = {"3d_rebuild.mp4", "movimento_exportado.npz"}
+    if filename not in allowed_filenames:
+        raise HTTPException(status_code=404, detail="Artefato não encontrado")
+
+    settings = get_settings()
+    artifact_path = settings.results_dir / job_id / filename
+
+    if not artifact_path.exists():
+        raise HTTPException(status_code=404, detail="Artefato não encontrado")
+
+    return FileResponse(artifact_path)
