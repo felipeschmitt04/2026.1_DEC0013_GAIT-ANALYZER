@@ -1,0 +1,4 @@
+# Experimental NVIDIA/CUDA profile. Adjust CUDA/JAX/TensorFlow versions after
+# testing on the target GPU machine.
+-r requirements.cpu.txt
+

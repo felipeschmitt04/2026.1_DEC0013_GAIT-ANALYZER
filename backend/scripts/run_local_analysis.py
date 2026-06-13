@@ -18,4 +18,4 @@ if __name__ == "__main__":
         print("Finalizado")
 
     except Exception as e:
-        print(f"Erro {e}"
+        print(f"Erro {e}")
