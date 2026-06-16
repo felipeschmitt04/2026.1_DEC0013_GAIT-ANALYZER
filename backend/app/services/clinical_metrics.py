@@ -31,7 +31,6 @@ def calculate_clinical_metrics(pose3d: list) -> dict:
     }
 
     for frame in pose3d:
-        # Mapeamento Human3.6M usado pela engine.
         right_shoulder = frame[14]
         right_hip = frame[1]
         right_knee = frame[2]
@@ -60,4 +59,3 @@ def calculate_clinical_metrics(pose3d: list) -> dict:
         metrics["distancia_tornozelos_mm"].append(round(ankle_distance_m * 1000, 2))
 
     return metrics
-
