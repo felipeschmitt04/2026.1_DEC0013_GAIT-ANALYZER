@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY backend/app ./app
 COPY backend/storage ./storage
+COPY backend/tests ./tests
 
 ENV APP_ENV=production
 ENV APP_HOST=0.0.0.0
