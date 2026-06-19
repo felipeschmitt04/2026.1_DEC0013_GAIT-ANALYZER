@@ -31,6 +31,8 @@ def build_model3d_payload(wrapper: Any, state: Any) -> dict | None:
         if model is None:
             logger.warning("Modelo MuJoCo nao encontrado no wrapper")
             log_object_summary("wrapper", wrapper)
+            log_object_summary("wrapper.forward", getattr(wrapper, "forward", None))
+            log_object_summary("wrapper.trajectory", getattr(wrapper, "trajectory", None))
             log_object_summary("state", state)
             return build_state_only_payload(state)
 
@@ -77,24 +79,47 @@ def build_state_only_payload(state: Any) -> dict | None:
         log_object_summary("state_sem_frames", state)
         return None
 
+    first_frame = frames[0]
+    body_count = len(first_frame.get("body_xpos", []))
+    site_count = len(first_frame.get("site_xpos", []))
+
     return {
         "version": "1.0",
         "source": "humanoid_torque.xml",
-        "representation": "state_only",
+        "representation": "forward_kinematics_points",
         "unit": "meters",
         "coordinate_system": {
             "up_axis": "y",
             "forward_axis": "z",
             "right_axis": "x",
         },
-        "bodies": [],
+        "bodies": [
+            {
+                "id": body_id,
+                "name": f"body_{body_id}",
+                "parent_id": None,
+                "parent_name": None,
+            }
+            for body_id in range(body_count)
+        ],
         "geoms": [],
         "meshes": [],
-        "sites": [],
+        "sites": [
+            {
+                "id": site_id,
+                "name": f"site_{site_id}",
+                "body_id": None,
+                "body_name": None,
+            }
+            for site_id in range(site_count)
+        ],
+        "connections": [[index - 1, index] for index in range(1, body_count)],
         "frames": frames,
         "notes": [
-            "Wrapper nao expos o MjModel, mas o state foi exportado.",
-            "Use este payload para inspecao e ajuste do exportador na DGX.",
+            "Wrapper nao expos geometrias MuJoCo, mas a forward kinematics foi exportada.",
+            "body_xpos contem posicoes dos corpos do modelo.",
+            "site_xpos contem posicoes dos sites auxiliares do modelo.",
+            "connections e uma cadeia provisoria ate mapear a hierarquia real do descriptor.",
         ],
     }
 

@@ -146,6 +146,8 @@ const fittingBoneMaterial = new THREE.LineBasicMaterial({ color: 0xccefc4 });
 const jointGeometry = new THREE.SphereGeometry(0.035, 18, 18);
 const model3dMeshes = [];
 const model3dSites = [];
+const model3dBodies = [];
+const model3dBodyLines = [];
 const poseJoints = [];
 const poseBones = [];
 const fittingJoints = new Map();
@@ -296,6 +298,8 @@ function buildModel3dScene() {
   disposeGroup(model3dGroup);
   model3dMeshes.length = 0;
   model3dSites.length = 0;
+  model3dBodies.length = 0;
+  model3dBodyLines.length = 0;
 
   const model3d = currentResult.data.model3d;
   if (!model3d) return;
@@ -330,6 +334,30 @@ function buildModel3dScene() {
     model3dGroup.add(site);
     model3dSites.push(site);
   });
+
+  const bodyGeometry = new THREE.SphereGeometry(0.028, 14, 14);
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x74c0ff,
+    roughness: 0.42,
+    metalness: 0.08,
+  });
+
+  (model3d.bodies || []).forEach((body) => {
+    const bodyPoint = new THREE.Mesh(
+      bodyGeometry,
+      body.id === 0 ? rootMaterial : bodyMaterial,
+    );
+    bodyPoint.visible = false;
+    model3dGroup.add(bodyPoint);
+    model3dBodies.push(bodyPoint);
+  });
+
+  (model3d.connections || []).forEach(() => {
+    const line = new THREE.Line(newLineGeometry(), fittingBoneMaterial);
+    line.visible = false;
+    model3dGroup.add(line);
+    model3dBodyLines.push(line);
+  });
 }
 
 function updateModel3dScene() {
@@ -347,6 +375,11 @@ function updateModel3dScene() {
   const geoms = model3d.geoms || [];
   const calibration = visualCalibration.model3d;
   const floorOffset = estimateModel3dFloorOffset(frame, geoms);
+
+  if (positions.length === 0) {
+    updateModel3dPointScene(frame, calibration, floorOffset);
+    return;
+  }
 
   model3dMeshes.forEach((mesh, index) => {
     if (!mesh || !positions[index]) return;
@@ -375,6 +408,57 @@ function updateModel3dScene() {
       position[2] - calibration.originZ,
     );
     site.visible = true;
+  });
+}
+
+function updateModel3dPointScene(frame, calibration, floorOffset) {
+  const bodyPositions = frame.body_xpos || [];
+  const sitePositions = frame.site_xpos || [];
+  const connections = currentResult.data.model3d?.connections || [];
+
+  model3dBodies.forEach((bodyPoint, index) => {
+    const position = bodyPositions[index];
+    if (!position) {
+      bodyPoint.visible = false;
+      return;
+    }
+
+    bodyPoint.position.set(
+      position[0] - calibration.originX,
+      position[1] + floorOffset,
+      position[2] - calibration.originZ,
+    );
+    bodyPoint.visible = true;
+  });
+
+  model3dBodyLines.forEach((line, index) => {
+    const [start, end] = connections[index] || [];
+    const startPoint = model3dBodies[start];
+    const endPoint = model3dBodies[end];
+
+    if (!startPoint || !endPoint || !startPoint.visible || !endPoint.visible) {
+      line.visible = false;
+      return;
+    }
+
+    setLine(line, startPoint.position, endPoint.position);
+    line.visible = true;
+  });
+
+  model3dSites.forEach((site, index) => {
+    const position = sitePositions[index];
+    if (!position) {
+      site.visible = false;
+      return;
+    }
+
+    site.position.set(
+      position[0] - calibration.originX,
+      position[1] + floorOffset,
+      position[2] - calibration.originZ,
+    );
+    site.visible = true;
+    site.scale.setScalar(0.65);
   });
 }
 

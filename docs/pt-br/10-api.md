@@ -312,8 +312,10 @@ Campos principais:
 | `geoms` | Geometrias renderizaveis do modelo: esfera, capsula, cilindro, caixa, elipsoide ou mesh. |
 | `meshes` | Vertices e faces quando alguma geometria usa tipo `mesh`. |
 | `sites` | Pontos auxiliares do modelo, uteis para debug e validacao. |
-| `frames[].geom_xpos` | Posicao global de cada geometria por frame. |
-| `frames[].geom_xmat` | Matriz de rotacao global 3x3 de cada geometria por frame. |
+| `frames[].geom_xpos` | Posicao global de cada geometria por frame, quando disponivel. |
+| `frames[].geom_xmat` | Matriz de rotacao global 3x3 de cada geometria por frame, quando disponivel. |
+| `frames[].body_xpos` | Posicao global dos corpos do modelo por frame. |
+| `frames[].site_xpos` | Posicao global dos sites auxiliares do modelo por frame. |
 
 Regra:
 
@@ -322,6 +324,13 @@ Regra:
 - Se `data.model3d` vier `null`, usar `data.fitting` como fallback visual.
 - `data.fitting.angles` continua sendo a fonte correta para graficos e series
   biomecanicas.
+
+Representacoes conhecidas:
+
+| Representacao | Significado |
+| --- | --- |
+| `mujoco_geoms` | Exportacao mais completa, com geometrias renderizaveis e transforms por frame. |
+| `forward_kinematics_points` | Exportacao por pontos reais de forward kinematics (`body_xpos` e `site_xpos`) quando as geometrias MuJoCo nao estao expostas pelo wrapper. |
 
 ## data.fitting
 
