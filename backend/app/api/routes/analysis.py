@@ -61,6 +61,7 @@ def _store_generated_artifacts(result_dir: Path, job_id: str) -> dict:
 async def analyze_video(
     video: UploadFile = File(...),
     height_mm: int = Form(...),
+    rotated: bool = Form(False),
 ):
     if height_mm <= 0:
         raise HTTPException(status_code=422, detail="height_mm deve ser maior que zero")
@@ -88,6 +89,7 @@ async def analyze_video(
         window_L=settings.window_l,
         engine=engine,
         job_id=job_id,
+        rotated=rotated,
     )
 
     artifacts = _store_generated_artifacts(result_dir, job_id)

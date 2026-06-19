@@ -66,6 +66,7 @@ Campos:
 | --- | --- | --- | --- |
 | `video` | arquivo | sim | Video da marcha, preferencialmente `.mp4`. |
 | `height_mm` | inteiro | sim | Altura do paciente em milimetros. Exemplo: `1750`. |
+| `rotated` | booleano | nao | Padrao `false`. Use `true` apenas quando o video precisar ser transposto para a pessoa ser detectada corretamente. |
 
 Regras:
 
@@ -73,12 +74,15 @@ Regras:
 - O video precisa abrir no OpenCV.
 - Videos com FPS baixo, baixa resolucao ou duracao curta podem gerar warnings,
   mas ainda podem ser processados.
+- Video vertical (`height > width`) nao significa necessariamente `rotated=true`;
+  a decisao de rotacao deve ser explicita.
 
 Exemplo com `curl`:
 
 ```bash
 curl -F video=@meu_video.mp4 \
   -F height_mm=1750 \
+  -F rotated=false \
   http://localhost:8000/analyze
 ```
 
@@ -330,6 +334,7 @@ Representacoes conhecidas:
 | Representacao | Significado |
 | --- | --- |
 | `mujoco_geoms` | Exportacao mais completa, com geometrias renderizaveis e transforms por frame. |
+| `mujoco_geoms_from_qpos` | Exportacao completa recomputada com `mujoco.mj_forward` a partir de `state.qpos`, quando o wrapper nao expoe `geom_xpos` diretamente. |
 | `forward_kinematics_points` | Exportacao por pontos reais de forward kinematics (`body_xpos` e `site_xpos`) quando as geometrias MuJoCo nao estao expostas pelo wrapper. |
 
 ## data.fitting

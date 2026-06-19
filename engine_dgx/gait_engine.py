@@ -30,7 +30,9 @@ class GaitAnalysisEngine:
         self.window_L = window_L
         self.metrabs_model = None
         self.transformer_model = None
-        self.skeleton = "mpi_inf_3dhp_17"
+        self.gait_skeleton = "mpi_inf_3dhp_17"
+        self.fitting_skeleton = "bml_movi_87"
+        self.skeleton = self.gait_skeleton
 
         self._setup_gpu()
         self._load_models()
@@ -72,40 +74,63 @@ class GaitAnalysisEngine:
         (state, _constraints, _next_states), (ang, _vel, _action), _ = updated_model(
             dataset[0], skip_vel=True, skip_action=True
         )
-        model3d = build_model3d_payload(updated_model, state)
+        model3d = build_model3d_payload(updated_model, state, pose=ang)
 
         return ang, dataset[0], model3d
 
     def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
         logger.info("Processando video real: %s", video_path)
 
-        vid, _n_frames = video_reader(video_path)
-        joint_names = (
-            self.metrabs_model.per_skeleton_joint_names[self.skeleton]
+        vid, n_frames = video_reader(video_path)
+        gait_joint_names = (
+            self.metrabs_model.per_skeleton_joint_names[self.gait_skeleton]
             .numpy()
             .astype(str)
         )
-        accumulated = None
+        accumulated_gait = None
+        accumulated_fitting = None
 
-        logger.info("Extraindo pose 3D com MeTRAbs")
+        logger.info("Extraindo pose 3D com MeTRAbs para gait e fitting")
         for frame_batch in vid:
             if rotated:
                 frame_batch = frame_batch.transpose(0, 2, 1, 3)
 
-            pred = self.metrabs_model.detect_poses_batched(
+            pred_gait = self.metrabs_model.detect_poses_batched(
                 frame_batch,
-                skeleton=self.skeleton,
+                skeleton=self.gait_skeleton,
+            )
+            pred_fitting = self.metrabs_model.detect_poses_batched(
+                frame_batch,
+                skeleton=self.fitting_skeleton,
             )
 
-            if accumulated is None:
-                accumulated = pred
+            if accumulated_gait is None:
+                accumulated_gait = pred_gait
+                accumulated_fitting = pred_fitting
             else:
-                for key in accumulated.keys():
-                    accumulated[key] = tf.concat([accumulated[key], pred[key]], axis=0)
+                for key in accumulated_gait.keys():
+                    accumulated_gait[key] = tf.concat([accumulated_gait[key], pred_gait[key]], axis=0)
+                for key in accumulated_fitting.keys():
+                    accumulated_fitting[key] = tf.concat([accumulated_fitting[key], pred_fitting[key]], axis=0)
 
-        pose3d = np.array([p[0] for p in accumulated["poses3d"] if len(p) > 0])
-        if len(pose3d) == 0:
+        gait_people_per_frame = [len(p) for p in accumulated_gait["poses3d"]]
+        fitting_people_per_frame = [len(p) for p in accumulated_fitting["poses3d"]]
+        pose3d_gait = np.array([p[0] for p in accumulated_gait["poses3d"] if len(p) > 0])
+        pose3d_fitting = np.array([p[0] for p in accumulated_fitting["poses3d"] if len(p) > 0])
+        if len(pose3d_gait) == 0 or len(pose3d_fitting) == 0:
             raise ValueError("Nenhuma pose foi detectada no video")
+
+        diagnostics = {
+            "video_reader_frames": int(n_frames),
+            "rotated": bool(rotated),
+            "gait_skeleton": self.gait_skeleton,
+            "fitting_skeleton": self.fitting_skeleton,
+            "gait_pose_frames": int(len(pose3d_gait)),
+            "fitting_pose_frames": int(len(pose3d_fitting)),
+            "gait_frames_without_detection": int(sum(count == 0 for count in gait_people_per_frame)),
+            "fitting_frames_without_detection": int(sum(count == 0 for count in fitting_people_per_frame)),
+        }
+        logger.info("Diagnostico de deteccao: %s", diagnostics)
 
         expected_order = [
             "pelv",
@@ -127,10 +152,10 @@ class GaitAnalysisEngine:
             "rwri",
         ]
         expected_order_idx = np.array(
-            [joint_names.tolist().index(joint) for joint in expected_order]
+            [gait_joint_names.tolist().index(joint) for joint in expected_order]
         )
 
-        pose3d_ordered = pose3d[:, expected_order_idx]
+        pose3d_ordered = pose3d_gait[:, expected_order_idx]
 
         keypoints = pose3d_ordered - pose3d_ordered[:, 0, None]
         keypoints = keypoints / 1000.0
@@ -146,7 +171,7 @@ class GaitAnalysisEngine:
         phase_ordered = np.take(phase, [0, 4, 1, 5, 2, 6, 3, 7], axis=-1)
         state, _predictions, _errors = gait_kalman_smoother(phase_ordered)
 
-        angles_3d, timestamps_jax, model3d = self.calculate_kinematics(pose3d_ordered)
+        angles_3d, timestamps_jax, model3d = self.calculate_kinematics(pose3d_fitting)
 
         np.savez("movimento_exportado.npz", angulos=angles_3d, timestamps=timestamps_jax)
 
@@ -160,4 +185,5 @@ class GaitAnalysisEngine:
                 "timestamps": timestamps_jax.tolist(),
             },
             "model3d": model3d,
+            "diagnostics": diagnostics,
         }

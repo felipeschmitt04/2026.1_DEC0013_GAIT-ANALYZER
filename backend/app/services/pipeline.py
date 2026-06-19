@@ -15,7 +15,7 @@ from app.services.video_metadata import get_metadata
 logger = logging.getLogger("Pipeline")
 
 
-def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None):
+def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rotated: bool = False):
     logger.info("Iniciando pipeline")
     logger.debug("Criando job")
 
@@ -49,7 +49,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None):
             video_path=video_path,
             height_mm=height_mm,
             window_L=window_L,
-            rotated=video_data["rotated"],
+            rotated=rotated,
             fps=video_data["fps"],
             duration_ms=video_data["duration_ms"],
         )
@@ -77,12 +77,21 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None):
                 engine.process_video(  # Aqui chama a função que vai processar o vídeo
                     video_path=video_path,
                     height_mm=height_mm,
-                    rotated=video_data["rotated"],
+                    rotated=rotated,
                 )
             )
 
             logger.info("Vídeo processado com sucesso")
 
+            diagnostics = raw_data.get("diagnostics", {}) if isinstance(raw_data, dict) else {}
+            gait_pose_frames = diagnostics.get("gait_pose_frames")
+            if isinstance(gait_pose_frames, int):
+                quality_info.frames_without_detection = max(
+                    0,
+                    video_data["frame_count"] - gait_pose_frames,
+                )
+                if quality_info.frames_without_detection > 0:
+                    quality_info.warnings.append("WARNING_201_PARTIAL_POSE_DETECTION")
             finish_job(status="completed", stage="finished")
 
             dados_biomecanicos = BiomechanicalData(

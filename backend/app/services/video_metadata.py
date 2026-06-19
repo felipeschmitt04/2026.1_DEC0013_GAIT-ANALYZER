@@ -41,7 +41,8 @@ def get_metadata(file_path):
             "height": height,
             "frame_count": frame_count,
             "duration_ms": int(duration_s * 1000),
-            "rotated": height > width,
+            "is_portrait": height > width,
+            "rotated": False,
         }
     finally:
         cap.release()

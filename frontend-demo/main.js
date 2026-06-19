@@ -91,6 +91,8 @@ let lastStepAt = 0;
 const defaultPelvisHeight = 0.92;
 const visualFittingSmoothingRadius = 2;
 const visualStrideScale = 0.35;
+const model3dFloorClearance = 0.006;
+const model3dGroundSmoothRadius = 2;
 
 let visualCalibration = buildVisualCalibration(currentResult);
 
@@ -148,6 +150,7 @@ const model3dMeshes = [];
 const model3dSites = [];
 const model3dBodies = [];
 const model3dBodyLines = [];
+let model3dGroundOffsets = [];
 const poseJoints = [];
 const poseBones = [];
 const fittingJoints = new Map();
@@ -300,6 +303,7 @@ function buildModel3dScene() {
   model3dSites.length = 0;
   model3dBodies.length = 0;
   model3dBodyLines.length = 0;
+  model3dGroundOffsets = [];
 
   const model3d = currentResult.data.model3d;
   if (!model3d) return;
@@ -358,6 +362,8 @@ function buildModel3dScene() {
     model3dGroup.add(line);
     model3dBodyLines.push(line);
   });
+
+  model3dGroundOffsets = buildModel3dGroundOffsets(model3d, visualCalibration.model3d);
 }
 
 function updateModel3dScene() {
@@ -369,12 +375,13 @@ function updateModel3dScene() {
     return;
   }
 
-  const frame = model3d.frames[currentFrame] || model3d.frames[0];
+  const frameIndex = Math.min(currentFrame, model3d.frames.length - 1);
+  const frame = model3d.frames[frameIndex] || model3d.frames[0];
   const positions = frame.geom_xpos || [];
   const rotations = frame.geom_xmat || [];
   const geoms = model3d.geoms || [];
   const calibration = visualCalibration.model3d;
-  const floorOffset = estimateModel3dFloorOffset(frame, geoms);
+  const floorOffset = getModel3dGroundOffset(frameIndex);
 
   if (positions.length === 0) {
     updateModel3dPointScene(frame, calibration, floorOffset);
@@ -382,15 +389,24 @@ function updateModel3dScene() {
   }
 
   model3dMeshes.forEach((mesh, index) => {
-    if (!mesh || !positions[index]) return;
+    if (!mesh || !positions[index]) {
+      if (mesh) mesh.visible = false;
+      return;
+    }
+
+    const geom = geoms[index];
+    if (!isRenderableMujocoGeom(geom)) {
+      mesh.visible = false;
+      return;
+    }
 
     const adjustedPosition = [
-      positions[index][0] - calibration.originX,
-      positions[index][1] + floorOffset,
-      positions[index][2] - calibration.originZ,
+      positions[index][0],
+      positions[index][1],
+      positions[index][2],
     ];
 
-    setMujocoMatrix(mesh, adjustedPosition, rotations[index]);
+    setMujocoMatrix(mesh, adjustedPosition, rotations[index], calibration, floorOffset);
     mesh.visible = true;
   });
 
@@ -402,11 +418,7 @@ function updateModel3dScene() {
       return;
     }
 
-    site.position.set(
-      position[0] - calibration.originX,
-      position[1] + floorOffset,
-      position[2] - calibration.originZ,
-    );
+    site.position.copy(mujocoToThreePosition(position, calibration, floorOffset));
     site.visible = true;
   });
 }
@@ -423,11 +435,7 @@ function updateModel3dPointScene(frame, calibration, floorOffset) {
       return;
     }
 
-    bodyPoint.position.set(
-      position[0] - calibration.originX,
-      position[1] + floorOffset,
-      position[2] - calibration.originZ,
-    );
+    bodyPoint.position.copy(mujocoToThreePosition(position, calibration, floorOffset));
     bodyPoint.visible = true;
   });
 
@@ -452,11 +460,7 @@ function updateModel3dPointScene(frame, calibration, floorOffset) {
       return;
     }
 
-    site.position.set(
-      position[0] - calibration.originX,
-      position[1] + floorOffset,
-      position[2] - calibration.originZ,
-    );
+    site.position.copy(mujocoToThreePosition(position, calibration, floorOffset));
     site.visible = true;
     site.scale.setScalar(0.65);
   });
@@ -466,7 +470,9 @@ function createMujocoGeometry(geom, meshById) {
   const size = geom.size || [0.03, 0.03, 0.03];
 
   if (geom.type === "sphere") {
-    return new THREE.SphereGeometry(Math.max(size[0], 0.005), 18, 18);
+    return convertMujocoGeometry(
+      new THREE.SphereGeometry(Math.max(size[0], 0.005), 18, 18),
+    );
   }
 
   if (geom.type === "capsule") {
@@ -477,7 +483,7 @@ function createMujocoGeometry(geom, meshById) {
       16,
     );
     geometry.rotateX(Math.PI / 2);
-    return geometry;
+    return convertMujocoGeometry(geometry);
   }
 
   if (geom.type === "cylinder") {
@@ -488,14 +494,16 @@ function createMujocoGeometry(geom, meshById) {
       18,
     );
     geometry.rotateX(Math.PI / 2);
-    return geometry;
+    return convertMujocoGeometry(geometry);
   }
 
   if (geom.type === "box") {
-    return new THREE.BoxGeometry(
-      Math.max(size[0] * 2, 0.01),
-      Math.max(size[1] * 2, 0.01),
-      Math.max(size[2] * 2, 0.01),
+    return convertMujocoGeometry(
+      new THREE.BoxGeometry(
+        Math.max(size[0] * 2, 0.01),
+        Math.max(size[1] * 2, 0.01),
+        Math.max(size[2] * 2, 0.01),
+      ),
     );
   }
 
@@ -506,7 +514,7 @@ function createMujocoGeometry(geom, meshById) {
       Math.max(size[1], 0.005),
       Math.max(size[2], 0.005),
     );
-    return geometry;
+    return convertMujocoGeometry(geometry);
   }
 
   if (geom.type === "mesh" && geom.mesh_id !== null) {
@@ -526,7 +534,7 @@ function createMeshGeometry(meshPayload) {
   );
   geometry.setIndex(meshPayload.faces.flat());
   geometry.computeVertexNormals();
-  return geometry;
+  return convertMujocoGeometry(geometry);
 }
 
 function createMujocoMaterial(geom) {
@@ -541,49 +549,173 @@ function createMujocoMaterial(geom) {
   });
 }
 
-function setMujocoMatrix(mesh, position, xmat) {
+function setMujocoMatrix(mesh, position, xmat, calibration, floorOffset) {
+  mesh.matrix.copy(buildMujocoMatrix(position, xmat, calibration, floorOffset));
+}
+
+function buildMujocoMatrix(position, xmat, calibration, floorOffset) {
   const matrix = new THREE.Matrix4();
+  const convertedPosition = mujocoToThreePosition(position, calibration, floorOffset);
 
   if (Array.isArray(xmat) && xmat.length >= 9) {
+    const rotation = mujocoRotationToThree(xmat);
     matrix.set(
-      xmat[0],
-      xmat[1],
-      xmat[2],
-      position[0],
-      xmat[3],
-      xmat[4],
-      xmat[5],
-      position[1],
-      xmat[6],
-      xmat[7],
-      xmat[8],
-      position[2],
+      rotation[0],
+      rotation[1],
+      rotation[2],
+      0,
+      rotation[3],
+      rotation[4],
+      rotation[5],
+      0,
+      rotation[6],
+      rotation[7],
+      rotation[8],
+      0,
       0,
       0,
       0,
       1,
     );
-    mesh.matrix.copy(matrix);
-    return;
+    matrix.premultiply(new THREE.Matrix4().makeRotationFromQuaternion(calibration.alignment));
+    matrix.setPosition(convertedPosition);
+    return matrix;
   }
 
-  matrix.makeTranslation(position[0], position[1], position[2]);
-  mesh.matrix.copy(matrix);
+  matrix.makeTranslation(convertedPosition.x, convertedPosition.y, convertedPosition.z);
+  return matrix;
 }
 
-function estimateModel3dFloorOffset(frame, geoms) {
-  const positions = frame.geom_xpos || frame.body_xpos || frame.site_xpos || [];
-  let minY = Number.POSITIVE_INFINITY;
+function mujocoToThreePosition(position, calibration, floorOffset = 0) {
+  const converted = new THREE.Vector3(
+    position[0] - calibration.originX,
+    position[2],
+    -(position[1] - calibration.originZ),
+  );
+  converted.applyQuaternion(calibration.alignment);
+  converted.y += floorOffset;
+  return converted;
+}
 
-  positions.forEach((position, index) => {
-    const geom = geoms[index];
-    const size = geom?.size || [0, 0, 0];
-    const radius = Math.max(...size, 0);
-    minY = Math.min(minY, position[1] - radius);
+function mujocoRotationToThree(xmat) {
+  const c = [
+    [1, 0, 0],
+    [0, 0, 1],
+    [0, -1, 0],
+  ];
+  const r = [
+    [xmat[0], xmat[1], xmat[2]],
+    [xmat[3], xmat[4], xmat[5]],
+    [xmat[6], xmat[7], xmat[8]],
+  ];
+  const converted = multiply3(c, r);
+  return converted.flat();
+}
+
+function convertMujocoGeometry(geometry) {
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function multiply3(a, b) {
+  return a.map((row, rowIndex) =>
+    row.map((_, colIndex) =>
+      a[rowIndex][0] * b[0][colIndex] +
+      a[rowIndex][1] * b[1][colIndex] +
+      a[rowIndex][2] * b[2][colIndex],
+    ),
+  );
+}
+
+function buildModel3dGroundOffsets(model3d, calibration) {
+  const frames = model3d?.frames || [];
+  const geoms = model3d?.geoms || [];
+  const rawOffsets = frames.map((frame) => {
+    const footOffset = estimateModel3dFrameGroundOffset(frame, geoms, calibration, true);
+    if (Number.isFinite(footOffset)) return footOffset;
+
+    return estimateModel3dFrameGroundOffset(frame, geoms, calibration, false);
   });
 
-  if (!Number.isFinite(minY)) return 0;
-  return 0.04 - minY;
+  return smoothModel3dGroundOffsets(fillModel3dGroundOffsets(rawOffsets));
+}
+
+function estimateModel3dFrameGroundOffset(frame, geoms, calibration, footOnly) {
+  const positions = frame.geom_xpos || [];
+  const rotations = frame.geom_xmat || [];
+  let minY = Number.POSITIVE_INFINITY;
+
+  model3dMeshes.forEach((mesh, index) => {
+    const geom = geoms[index];
+    if (!mesh?.geometry || !positions[index] || !isRenderableMujocoGeom(geom)) return;
+    if (footOnly && !isFootGroundGeom(geom)) return;
+
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+
+    const matrix = buildMujocoMatrix(positions[index], rotations[index], calibration, 0);
+    const box = new THREE.Box3().copy(mesh.geometry.boundingBox).applyMatrix4(matrix);
+    minY = Math.min(minY, box.min.y);
+  });
+
+  if (!Number.isFinite(minY)) return Number.NaN;
+  return clamp(getModel3dFloorY() - minY, -1.4, 1.4);
+}
+
+function fillModel3dGroundOffsets(rawOffsets) {
+  const firstFinite = rawOffsets.find((value) => Number.isFinite(value)) ?? 0;
+  let lastFinite = firstFinite;
+
+  return rawOffsets.map((value) => {
+    if (Number.isFinite(value)) {
+      lastFinite = value;
+      return value;
+    }
+
+    return lastFinite;
+  });
+}
+
+function smoothModel3dGroundOffsets(offsets) {
+  return offsets.map((_, index) => {
+    let total = 0;
+    let count = 0;
+    const start = Math.max(0, index - model3dGroundSmoothRadius);
+    const end = Math.min(offsets.length - 1, index + model3dGroundSmoothRadius);
+
+    for (let i = start; i <= end; i += 1) {
+      if (!Number.isFinite(offsets[i])) continue;
+      total += offsets[i];
+      count += 1;
+    }
+
+    return count ? clamp(total / count, -1.4, 1.4) : 0;
+  });
+}
+
+function getModel3dGroundOffset(frameIndex) {
+  return model3dGroundOffsets[frameIndex] ?? model3dGroundOffsets[model3dGroundOffsets.length - 1] ?? 0;
+}
+
+function getModel3dFloorY() {
+  return grid.position.y + model3dFloorClearance;
+}
+
+function isRenderableMujocoGeom(geom) {
+  const alpha = geom?.rgba?.[3] ?? 1;
+  return Boolean(geom) && geom.type !== "plane" && alpha > 0.05;
+}
+
+function isFootGroundGeom(geom) {
+  const label = `${geom?.name || ""} ${geom?.body_name || ""}`.toLowerCase();
+  return (
+    label.includes("foot") ||
+    label.includes("bofoot") ||
+    label.includes("toes") ||
+    label.includes("talus") ||
+    label.includes("calcn")
+  );
 }
 
 function disposeGroup(group) {
@@ -867,15 +999,22 @@ function buildModel3dCalibration(model3d) {
     return {
       originX: 0,
       originZ: 0,
+      alignment: new THREE.Quaternion(),
     };
   }
 
-  const xs = positions.map((position) => position[0]);
-  const zs = positions.map((position) => position[2]);
+  const bodies = model3d?.bodies || [];
+  const bodyPositions = firstFrame?.body_xpos || [];
+  const pelvisIndex = bodies.findIndex((body) => body.name === "pelvis");
+  const pelvis = bodyPositions[pelvisIndex] || positions[0];
+  const originX = pelvis?.[0] ?? 0;
+  const originZ = pelvis?.[1] ?? 0;
+  const alignment = new THREE.Quaternion();
 
   return {
-    originX: (Math.min(...xs) + Math.max(...xs)) / 2,
-    originZ: (Math.min(...zs) + Math.max(...zs)) / 2,
+    originX,
+    originZ,
+    alignment,
   };
 }
 

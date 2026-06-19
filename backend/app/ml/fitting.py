@@ -29,12 +29,15 @@ def loss(
         skip_action=True
     )
 
-    jax_indices = [69, 81, 83, 79, 73, 75, 71, 68, 70, 67, 67, 76, 72, 77, 84, 80, 85]
-    
-    pred_kp3d = state.site_xpos[:, jax_indices, :]
+    if keypoints3d.shape[1] == state.site_xpos.shape[1]:
+        pred_kp3d = state.site_xpos
+    else:
+        jax_indices = jnp.array([69, 81, 83, 79, 73, 75, 71, 68, 70, 67, 67, 76, 72, 77, 84, 80, 85])
+        pred_kp3d = state.site_xpos[:, jax_indices, :]
 
     l = jnp.mean((pred_kp3d - keypoints3d) ** 2) * 100 
     metrics["kp_err"] = l
+
 
     l_site_offset = jnp.sum(jnp.square(model.site_offsets))
     l += l_site_offset * site_offset_regularization

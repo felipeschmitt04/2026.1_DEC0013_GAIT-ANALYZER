@@ -1,0 +1,1 @@
+docker run --rm -d   --name gait-analyzer-remote-dgx   -p 8000:8000   -e ENGINE_MODE=remote   -e REMOTE_ENGINE_URL=https://hypertext-reoccur-alive.ngrok-free.dev   -e REMOTE_ENGINE_TIMEOUT_S=3600   gait-analyzer-backend:cpu
