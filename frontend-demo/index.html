@@ -59,22 +59,25 @@
 
           <section>
             <h2>Timeline</h2>
-            <div class="mode-switch" role="group" aria-label="Modo de visualizacao">
-              <button class="mode-button is-active" data-mode="model3d" type="button">
-                MuJoCo
-              </button>
-              <button class="mode-button" data-mode="pose3d" type="button">
-                Pose3D
-              </button>
-              <button class="mode-button" data-mode="fitting" type="button">
-                Fitting
-              </button>
-            </div>
             <div class="timeline-row">
               <button id="play-toggle" type="button">Pausar</button>
               <span id="frame-label">Frame 1 / 30</span>
             </div>
             <input id="frame-slider" type="range" min="0" max="29" value="0" />
+            <div class="speed-control">
+              <div class="speed-row">
+                <label for="playback-speed">Velocidade</label>
+                <span id="playback-speed-value">0.50x</span>
+              </div>
+              <input
+                id="playback-speed"
+                type="range"
+                min="0.25"
+                max="1.5"
+                step="0.05"
+                value="0.5"
+              />
+            </div>
           </section>
 
           <section>

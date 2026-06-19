@@ -9,6 +9,8 @@ const fetchButton = document.querySelector("#fetch-job");
 const playButton = document.querySelector("#play-toggle");
 const frameSlider = document.querySelector("#frame-slider");
 const frameLabel = document.querySelector("#frame-label");
+const playbackSpeedSlider = document.querySelector("#playback-speed");
+const playbackSpeedValue = document.querySelector("#playback-speed-value");
 const modeButtons = document.querySelectorAll(".mode-button");
 const coordinateSelect = document.querySelector("#coordinate-select");
 const coordinateChart = document.querySelector("#coordinate-chart");
@@ -88,13 +90,17 @@ let currentMode = "model3d";
 let playing = true;
 let lastStepAt = 0;
 
+const defaultPlaybackSpeed = 0.5;
 const defaultPelvisHeight = 0.92;
 const visualFittingSmoothingRadius = 2;
 const visualStrideScale = 0.35;
 const model3dFloorClearance = 0.006;
 const model3dGroundSmoothRadius = 2;
+const defaultPlaybackFps = 30;
+const maxPlaybackFps = 60;
 
 let visualCalibration = buildVisualCalibration(currentResult);
+let playbackSpeed = defaultPlaybackSpeed;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -212,6 +218,7 @@ fetchButton.addEventListener("click", async () => {
 
 playButton.addEventListener("click", () => {
   playing = !playing;
+  lastStepAt = 0;
   playButton.textContent = playing ? "Pausar" : "Reproduzir";
 });
 
@@ -220,6 +227,12 @@ frameSlider.addEventListener("input", () => {
   playing = false;
   playButton.textContent = "Reproduzir";
   updateScene();
+});
+
+playbackSpeedSlider.addEventListener("input", () => {
+  playbackSpeed = Number(playbackSpeedSlider.value) || defaultPlaybackSpeed;
+  lastStepAt = 0;
+  syncPlaybackSpeedControl();
 });
 
 modeButtons.forEach((button) => {
@@ -251,7 +264,9 @@ function loadResult(result, statusMessage) {
   currentResult = result;
   currentFrame = 0;
   playing = true;
+  lastStepAt = 0;
   playButton.textContent = "Pausar";
+  syncPlaybackSpeedControl();
   visualCalibration = buildVisualCalibration(result);
   buildModel3dScene();
   currentMode = data.model3d ? "model3d" : "fitting";
@@ -733,6 +748,11 @@ function syncModeButtons() {
   });
 }
 
+function syncPlaybackSpeedControl() {
+  playbackSpeedSlider.value = playbackSpeed.toFixed(2);
+  playbackSpeedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
+}
+
 function getModeMessage() {
   if (currentMode === "model3d") {
     return currentResult.data.model3d
@@ -1207,6 +1227,15 @@ function getFrameTotal() {
   return currentResult.data.pose3d.length;
 }
 
+function getPlaybackFps() {
+  const fps = currentResult.input_summary?.fps;
+  if (typeof fps !== "number" || Number.isNaN(fps) || fps <= 0) {
+    return defaultPlaybackFps * playbackSpeed;
+  }
+
+  return clamp(fps, 12, maxPlaybackFps) * playbackSpeed;
+}
+
 function formatMetric(value, unit) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
   return `${value.toFixed(1)} ${unit}`;
@@ -1251,10 +1280,24 @@ function newLineGeometry() {
 function animate(time) {
   resizeRenderer();
 
-  if (playing && time - lastStepAt > 1000 / 18) {
-    currentFrame = (currentFrame + 1) % getFrameTotal();
+  if (playing) {
+    const frameIntervalMs = 1000 / getPlaybackFps();
+    if (lastStepAt === 0) lastStepAt = time;
+
+    const elapsedMs = time - lastStepAt;
+    if (elapsedMs >= frameIntervalMs) {
+      const frameSteps = Math.max(1, Math.floor(elapsedMs / frameIntervalMs));
+      currentFrame = (currentFrame + frameSteps) % getFrameTotal();
+      lastStepAt += frameSteps * frameIntervalMs;
+      updateScene();
+    }
+  } else {
+    lastStepAt = 0;
+  }
+
+  if (playing && currentFrame >= getFrameTotal()) {
+    currentFrame = 0;
     updateScene();
-    lastStepAt = time;
   }
 
   controls.update();

@@ -188,6 +188,33 @@ dd {
   accent-color: #42d3c8;
 }
 
+.speed-control {
+  margin-top: 14px;
+}
+
+.speed-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #d5d9dc;
+  font-size: 0.86rem;
+}
+
+.speed-row label {
+  color: #aeb6ba;
+}
+
+#playback-speed-value {
+  font-weight: 700;
+}
+
+#playback-speed {
+  width: 100%;
+  accent-color: #42d3c8;
+}
+
 .mode-switch {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
