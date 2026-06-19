@@ -91,6 +91,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None):
                 pose3d=raw_data["pose3d"],
                 skeleton=get_pose3d_skeleton_info(),
                 fitting=build_fitting_payload(raw_data["kinematics"]),
+                model3d=raw_data.get("model3d"),
                 metricas_clinicas=calculate_clinical_metrics(raw_data["pose3d"]),
                 video_3d=None,
             )

@@ -11,6 +11,7 @@ class BiomechanicalData(BaseModel):
     pose3d: list
     skeleton: dict | None = None
     fitting: dict | None = None
+    model3d: dict | None = None
     metricas_clinicas: dict | None = None
     artifacts: dict | None = None
     video_3d: str | None = None

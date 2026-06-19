@@ -1,5 +1,7 @@
 import math
 
+from app.services.fitting_metadata import get_fitting_coordinate_names
+
 
 class MockGaitAnalysisEngine:
     """Engine leve para testar contrato da API sem modelos de IA."""
@@ -37,13 +39,38 @@ class MockGaitAnalysisEngine:
 
         timestamps = [index / 30 for index in range(frame_count)]
 
+        coordinate_names = get_fitting_coordinate_names()
+        angles = []
+
+        for index in range(frame_count):
+            phase = math.sin(index / 4)
+            opposite_phase = math.sin(index / 4 + math.pi)
+            frame_angles = [0.0] * len(coordinate_names)
+
+            def set_angle(name: str, value: float) -> None:
+                frame_angles[coordinate_names.index(name)] = value
+
+            set_angle("pelvis_ty", 0.92)
+            set_angle("hip_flexion_r", 0.35 + 0.28 * phase)
+            set_angle("knee_angle_r", -0.28 - 0.48 * max(phase, 0.0))
+            set_angle("ankle_angle_r", 0.12 * phase)
+            set_angle("hip_flexion_l", 0.35 + 0.28 * opposite_phase)
+            set_angle("knee_angle_l", -0.28 - 0.48 * max(opposite_phase, 0.0))
+            set_angle("ankle_angle_l", 0.12 * opposite_phase)
+            set_angle("arm_flex_r", 0.28 * opposite_phase)
+            set_angle("arm_flex_l", 0.28 * phase)
+            set_angle("elbow_flex_r", 0.38)
+            set_angle("elbow_flex_l", 0.38)
+
+            angles.append(frame_angles)
+
         return {
             "status": "sucesso_mock",
             "video_3d": None,
             "pose3d": pose3d,
             "events": [[0.0] * 8 for _ in range(frame_count)],
             "kinematics": {
-                "angles": [[0.0] * 40 for _ in range(frame_count)],
+                "angles": angles,
                 "timestamps": timestamps,
             },
         }

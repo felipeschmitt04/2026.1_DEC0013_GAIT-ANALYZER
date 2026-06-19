@@ -1,39 +1,39 @@
-import optax
+from typing import Dict, Tuple
+
 import equinox as eqx
 import jax
+import optax
 from jax import numpy as jnp
-from jaxtyping import Float, Array
-from typing import Tuple, Dict
+from jaxtyping import Array, Float
+from monocular_demos.biomechanics_mjx.monocular_trajectory import KineticsWrapper
 from tqdm import trange
 
-from monocular_demos.biomechanics_mjx.monocular_trajectory import KineticsWrapper
 
 def clear_jit_caches() -> None:
     eqx.clear_caches()
     jax.clear_caches()
 
+
 def loss(
     model: KineticsWrapper,
     x: Float[Array, "times"],
     y: Float[Array, "times keypoints 3"],
-    site_offset_regularization = 1e-1
+    site_offset_regularization=1e-1,
 ) -> Tuple[Float, Dict]:
-
     timestamps = x
     keypoints3d = y
     metrics = {}
 
-    (state, constraints, next_states), (ang, vel, action), _ = model(
+    (state, _constraints, _next_states), (_ang, _vel, _action), _ = model(
         timestamps,
         skip_vel=True,
-        skip_action=True
+        skip_action=True,
     )
 
     jax_indices = [69, 81, 83, 79, 73, 75, 71, 68, 70, 67, 67, 76, 72, 77, 84, 80, 85]
-    
     pred_kp3d = state.site_xpos[:, jax_indices, :]
 
-    l = jnp.mean((pred_kp3d - keypoints3d) ** 2) * 100 
+    l = jnp.mean((pred_kp3d - keypoints3d) ** 2) * 100
     metrics["kp_err"] = l
 
     l_site_offset = jnp.sum(jnp.square(model.site_offsets))
@@ -41,6 +41,7 @@ def loss(
 
     metrics = {"loss": l, **metrics}
     return l, metrics
+
 
 @eqx.filter_jit
 def step(model, opt_state, data, loss_grad, optimizer, **kwargs):
@@ -51,8 +52,10 @@ def step(model, opt_state, data, loss_grad, optimizer, **kwargs):
     model = eqx.apply_updates(model, updates)
     return val, model, opt_state, metrics
 
+
 def fit_model(
-    model: KineticsWrapper, dataset: Tuple,
+    model: KineticsWrapper,
+    dataset: Tuple,
     lr_end_value: float = 1e-8,
     lr_init_value: float = 1e-4,
     max_iters: int = 5000,
@@ -61,7 +64,9 @@ def fit_model(
     clear_jit_caches()
 
     transition_steps = 10
-    lr_decay_rate = (lr_end_value / lr_init_value) ** (1.0 / (max_iters // transition_steps))
+    lr_decay_rate = (lr_end_value / lr_init_value) ** (
+        1.0 / (max_iters // transition_steps)
+    )
     learning_rate = optax.warmup_exponential_decay_schedule(
         init_value=0,
         warmup_steps=0,
@@ -72,24 +77,26 @@ def fit_model(
     )
 
     optimizer = optax.chain(
-        optax.adamw(learning_rate=learning_rate, b1=0.8, weight_decay=1e-5), 
-        optax.zero_nans(), 
-        optax.clip_by_global_norm(clip_by_global_norm)
+        optax.adamw(learning_rate=learning_rate, b1=0.8, weight_decay=1e-5),
+        optax.zero_nans(),
+        optax.clip_by_global_norm(clip_by_global_norm),
     )
 
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
-
     loss_grad = eqx.filter_value_and_grad(loss, has_aux=True)
 
     counter = trange(max_iters)
-    for i in counter:
-        val, model, opt_state, metrics = step(model, opt_state, dataset, loss_grad, optimizer)
+    for index in counter:
+        val, model, opt_state, metrics = step(
+            model,
+            opt_state,
+            dataset,
+            loss_grad,
+            optimizer,
+        )
 
-        if i > 0 and i % int(max_iters // 10) == 0:
-            pass 
-
-        if i % 50 == 0:
-            metrics = {k: v.item() for k,v in metrics.items()}
+        if index % 50 == 0:
+            metrics = {key: value.item() for key, value in metrics.items()}
             counter.set_postfix(metrics)
 
     clear_jit_caches()

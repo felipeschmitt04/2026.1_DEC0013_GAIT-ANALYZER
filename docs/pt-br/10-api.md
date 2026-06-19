@@ -3,10 +3,11 @@
 Este contrato define a versao V1 da API que o frontend deve consumir para
 upload de video, acompanhamento do job, visualizacao 3D, graficos e relatorio.
 
-O frontend deve considerar os dados de `data.fitting` como a fonte principal
-para animacao/modelo 3D e analises mais precisas. `data.pose3d` existe como
-representacao simples por pontos e linhas, util para depuracao, fallback visual
-ou preview de esqueleto.
+O frontend deve considerar `data.model3d`, quando presente, como a fonte
+principal para visualizacao 3D fiel do modelo MuJoCo. `data.fitting` continua
+sendo a fonte principal para graficos biomecanicos, analises de coordenadas e
+fallback visual. `data.pose3d` existe como representacao simples por pontos e
+linhas, util para depuracao, fallback visual ou preview de esqueleto.
 
 ## URL Base
 
@@ -25,9 +26,10 @@ continuar iguais.
 1. Frontend envia video + altura para POST /analyze
 2. Backend processa o video e retorna ResultV1
 3. Frontend guarda job.job_id
-4. Frontend usa data.fitting para animacao 3D e graficos biomecanicos
-5. Frontend usa data.metricas_clinicas para graficos/relatorio clinico
-6. Frontend pode buscar novamente o resultado em GET /results/{job_id}
+4. Frontend usa data.model3d para animacao 3D quando disponivel
+5. Frontend usa data.fitting para graficos biomecanicos e fallback visual
+6. Frontend usa data.metricas_clinicas para graficos/relatorio clinico
+7. Frontend pode buscar novamente o resultado em GET /results/{job_id}
 ```
 
 No momento o processamento e sincrono: `POST /analyze` ja retorna o resultado
@@ -250,6 +252,7 @@ O frontend deve mostrar warnings de forma nao bloqueante.
   "pose3d": [],
   "skeleton": {},
   "fitting": {},
+  "model3d": null,
   "metricas_clinicas": {},
   "artifacts": null,
   "video_3d": null
@@ -260,14 +263,70 @@ Prioridade de uso no frontend:
 
 | Uso | Campo principal | Campo alternativo |
 | --- | --- | --- |
-| Modelo 3D preciso/interativo | `data.fitting` | `data.pose3d` |
+| Modelo 3D preciso/interativo | `data.model3d` | `data.fitting` |
 | Graficos biomecanicos | `data.fitting`, `data.metricas_clinicas` | `data.kinematics` |
 | Relatorio clinico | `data.metricas_clinicas`, `input_summary`, `quality_info` | `data.fitting` |
 | Preview simples de esqueleto | `data.pose3d`, `data.skeleton` | nenhum |
 
+## data.model3d
+
+Quando a engine pesada roda na DGX, o backend pode retornar `data.model3d`.
+Esse bloco representa a cena 3D exportada a partir do proprio modelo
+MuJoCo/MJX ajustado, evitando que o frontend precise reconstruir manualmente a
+hierarquia do `humanoid_torque.xml`.
+
+Exemplo de estrutura:
+
+```json
+{
+  "version": "1.0",
+  "source": "humanoid_torque.xml",
+  "representation": "mujoco_geoms",
+  "unit": "meters",
+  "coordinate_system": {
+    "up_axis": "y",
+    "forward_axis": "z",
+    "right_axis": "x"
+  },
+  "bodies": [],
+  "geoms": [],
+  "meshes": [],
+  "sites": [],
+  "frames": []
+}
+```
+
+Uso recomendado no frontend:
+
+```text
+data.model3d.geoms[index]
+data.model3d.frames[frame].geom_xpos[index]
+data.model3d.frames[frame].geom_xmat[index]
+```
+
+Campos principais:
+
+| Campo | Significado |
+| --- | --- |
+| `bodies` | Corpos do modelo MuJoCo, com `parent_id` para hierarquia. |
+| `geoms` | Geometrias renderizaveis do modelo: esfera, capsula, cilindro, caixa, elipsoide ou mesh. |
+| `meshes` | Vertices e faces quando alguma geometria usa tipo `mesh`. |
+| `sites` | Pontos auxiliares do modelo, uteis para debug e validacao. |
+| `frames[].geom_xpos` | Posicao global de cada geometria por frame. |
+| `frames[].geom_xmat` | Matriz de rotacao global 3x3 de cada geometria por frame. |
+
+Regra:
+
+- Se `data.model3d` existir, o frontend deve preferir esse bloco para o avatar
+  principal.
+- Se `data.model3d` vier `null`, usar `data.fitting` como fallback visual.
+- `data.fitting.angles` continua sendo a fonte correta para graficos e series
+  biomecanicas.
+
 ## data.fitting
 
-Este e o bloco principal para o modelo 3D interativo.
+Este e o bloco principal para graficos biomecanicos, coordenadas articulares e
+fallback visual quando `data.model3d` nao estiver disponivel.
 
 ```json
 {
@@ -485,7 +544,7 @@ Uso no frontend:
 - relatorio;
 - comparacao entre lados direito/esquerdo.
 
-Observacao: apesar de o modelo 3D usar `data.fitting`, essas metricas ainda
+Observacao: mesmo quando o avatar principal usar `data.model3d`, essas metricas
 podem ser exibidas diretamente no relatorio porque ja estao em unidades
 clinicas amigaveis.
 
@@ -581,13 +640,15 @@ O frontend pode depender destes campos na V1:
 - `data.fitting.coordinates`
 - `data.fitting.angles`
 - `data.fitting.timestamps`
+- `data.model3d`
 - `data.pose3d`
 - `data.skeleton`
 - `data.metricas_clinicas`
 
 ## Decisoes para o Frontend
 
-- Modelo 3D interativo: usar `data.fitting`.
+- Modelo 3D interativo: usar `data.model3d` quando existir.
+- Fallback de modelo 3D: usar `data.fitting`.
 - Graficos biomecanicos detalhados: usar `data.fitting`.
 - Graficos clinicos simples: usar `data.metricas_clinicas`.
 - Relatorio: combinar `input_summary`, `quality_info`,

@@ -18,14 +18,36 @@ def get_engine():
         with _engine_lock:
             if _engine is None:
                 settings = get_settings()
+                engine_mode = settings.engine_mode.lower()
 
-                if settings.use_mock_engine:
+                if engine_mode == "mock":
                     logger.info("Iniciando mock engine")
                     from app.services.mock_engine import MockGaitAnalysisEngine
 
                     _engine = MockGaitAnalysisEngine()
                     logger.info("Mock engine pronta")
                     return _engine
+
+                if engine_mode == "remote":
+                    if not settings.remote_engine_url:
+                        raise RuntimeError(
+                            "REMOTE_ENGINE_URL deve ser definido quando ENGINE_MODE=remote"
+                        )
+
+                    logger.info("Iniciando remote DGX engine em %s", settings.remote_engine_url)
+                    from app.services.remote_dgx_engine import RemoteDgxEngine
+
+                    _engine = RemoteDgxEngine(
+                        base_url=settings.remote_engine_url,
+                        timeout_s=settings.remote_engine_timeout_s,
+                    )
+                    logger.info("Remote DGX engine pronta")
+                    return _engine
+
+                if engine_mode != "local":
+                    raise RuntimeError(
+                        f"ENGINE_MODE invalido: {settings.engine_mode}. Use mock, local ou remote."
+                    )
 
                 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
                 os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"

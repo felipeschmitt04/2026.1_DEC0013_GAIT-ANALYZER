@@ -1,0 +1,196 @@
+(gait_env) jovyan@36f8a067fffa:~/privado/engine_dgx$ uvicorn main:app --host 0.0.0.0 --port 9000
+INFO:     Started server process [28216]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
+INFO:EngineDGX.Worker:Carregando GaitAnalysisEngine na DGX
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1781830202.408656   28216 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+I0000 00:00:1781830202.461944   28216 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX512_FP16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1781830204.068153   28216 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Failed to import warp: No module named 'warp'
+Failed to import mujoco_warp: No module named 'warp'
+INFO:jax._src.xla_bridge:Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+INFO:EngineDGX.GaitEngine:TensorFlow GPUs detectadas: [PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:1', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:2', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:3', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:4', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:5', device_type='GPU'), PhysicalDevice(name='/physical_device:GPU:6', device_type='GPU')]
+INFO:EngineDGX.GaitEngine:Carregando MeTRAbs
+INFO:absl:Using /tmp/tfhub_modules to cache modules.
+I0000 00:00:1781830214.379816   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 73178 MB memory:  -> device: 0, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:1b:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.458289   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:1 with 40851 MB memory:  -> device: 1, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:43:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.466747   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:2 with 48004 MB memory:  -> device: 2, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:52:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.472153   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:3 with 44948 MB memory:  -> device: 3, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:61:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.477780   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:4 with 34875 MB memory:  -> device: 4, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:9d:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.484363   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:5 with 31989 MB memory:  -> device: 5, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:c3:00.0, compute capability: 9.0a
+I0000 00:00:1781830214.492535   28216 gpu_device.cc:2043] Created device /job:localhost/replica:0/task:0/device:GPU:6 with 39458 MB memory:  -> device: 6, name: NVIDIA H100 80GB HBM3, pci bus id: 0000:d1:00.0, compute capability: 9.0a
+INFO:absl:Fingerprint not found. Saved model loading will continue.
+INFO:absl:path_and_singleprint metric could not be logged. Saved model loading will continue.
+INFO:EngineDGX.GaitEngine:Carregando GaitTransformer
+INFO:EngineDGX.GaitEngine:Modelos carregados
+INFO:EngineDGX.Worker:GaitAnalysisEngine pronta
+INFO:     179.108.163.211:0 - "POST /warmup HTTP/1.1" 200 OK
+INFO:EngineDGX:Job 4fa6c5fd-6f2f-4c48-89be-b4b7a9d28b72 recebido. Iniciando engine pesada
+INFO:EngineDGX.GaitEngine:Processando video real: /home/jovyan/privado/engine_dgx/storage/uploads/4fa6c5fd-6f2f-4c48-89be-b4b7a9d28b72/input.mp4
+INFO:EngineDGX.GaitEngine:Extraindo pose 3D com MeTRAbs
+I0000 00:00:1781830315.981568   29767 cuda_dnn.cc:461] Loaded cuDNN version 92100
+I0000 00:00:1781830319.243217   29757 cuda_solvers.cc:175] Creating GpuSolver handles for stream 0x55e810cf9e60
+0it [00:00, ?it/s]I0000 00:00:1781830352.326280   28216 service.cc:153] XLA service 0x55e95ec21420 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+I0000 00:00:1781830352.326316   28216 service.cc:161]   StreamExecutor [0]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326323   28216 service.cc:161]   StreamExecutor [1]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326328   28216 service.cc:161]   StreamExecutor [2]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326332   28216 service.cc:161]   StreamExecutor [3]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326338   28216 service.cc:161]   StreamExecutor [4]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326343   28216 service.cc:161]   StreamExecutor [5]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.326348   28216 service.cc:161]   StreamExecutor [6]: NVIDIA H100 80GB HBM3, Compute Capability 9.0a (Driver: 12.8.0; Runtime: 12.9.0; Toolkit: 12.5.0; DNN: 9.21.0)
+I0000 00:00:1781830352.383211   28216 dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+I0000 00:00:1781830352.716151   28216 dot_merger.cc:481] Merging Dots in computation: a_inference_predict_batch_592601__XlaMustCompile_true_config_proto_17232892483546809410_executor_type_11160318154034397263_.46
+I0000 00:00:1781830354.091931   31465 subprocess_compilation.cc:348] ptxas warning : Registers are spilled to local memory in function 'gemm_fusion_dot_54', 100 bytes spill stores, 100 bytes spill loads
+
+I0000 00:00:1781830361.580896   28216 device_compiler.h:208] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+1it [00:09,  9.69s/it]
+INFO:root:Using JAX default device: cuda:0.
+/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/monocular_demos/biomechanics_mjx/monocular_trajectory.py:299: UserWarning: A JAX array is being set as static! This can result in unexpected behavior and is usually a mistake to do.
+  fkw = KineticsWrapper(fk, scale_mixer=scale_mixer, key=jax.random.PRNGKey(0))
+INFO:absl:A polynomial schedule was set with a non-positive `transition_steps` value; this results in a constant schedule with value `init_value`.
+  0%|                                                                                                                                                                                                | 0/5000 [00:00<?, ?it/s]INFO:root:Using JAX default device: cuda:0.
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 5000/5000 [01:28<00:00, 56.61it/s, kp_err=0.121, loss=0.122]
+INFO:     179.108.163.211:0 - "POST /process HTTP/1.1" 200 OK
+INFO:EngineDGX:Job 7c5fa7d6-8f8e-4883-9b90-1224c1f4b847 recebido. Iniciando engine pesada
+INFO:EngineDGX.GaitEngine:Processando video real: /home/jovyan/privado/engine_dgx/storage/uploads/7c5fa7d6-8f8e-4883-9b90-1224c1f4b847/input.mp4
+INFO:EngineDGX.GaitEngine:Extraindo pose 3D com MeTRAbs
+I0000 00:00:1781830703.186842   28216 dot_merger.cc:481] Merging Dots in computation: a_inference_predict_batch_599140__XlaMustCompile_true_config_proto_17232892483546809410_executor_type_11160318154034397263_.46
+INFO:root:Using JAX default device: cuda:0.
+INFO:absl:A polynomial schedule was set with a non-positive `transition_steps` value; this results in a constant schedule with value `init_value`.
+  0%|                                                                                                                                                                                                | 0/5000 [00:13<?, ?it/s]
+ERROR:EngineDGX:Falha no processamento do job 7c5fa7d6-8f8e-4883-9b90-1224c1f4b847
+Traceback (most recent call last):
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/jax/_src/core.py", line 1019, in __bool__
+    return self.aval._bool(self)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/jax/_src/core.py", line 1889, in error
+    raise TracerBoolConversionError(arg)
+jax.errors.TracerBoolConversionError: Attempted boolean conversion of traced array with shape bool[].
+The error occurred while tracing the function step at /home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/equinox/_jit.py:43 for jit. This value became a tracer due to JAX operations on these lines:
+
+  operation a:f32[22,1] = add 1.0:f32[] b
+    from line /home/jovyan/privado/engine_dgx/fitting.py:21:68 (loss)
+
+  operation a:f32[22,1] b:f32[22,1] = cond[
+  branches=(
+    { lambda ; c:f32[22,1]. let
+        d:f32[22,1] = broadcast_in_dim 0.0:f32[]
+      in (c, d) }
+    { lambda ; e:f32[22,1]. let
+        f:f32[22,1] = stop_gradient e
+        g:f32[22,1] = broadcast_in_dim 0.0:f32[]
+        _:f32[22,1] = broadcast_in_dim 0.0:f32[]
+      in (f, g) }
+  )
+] 0:i32[] h
+    from line /home/jovyan/privado/engine_dgx/fitting.py:21:68 (loss)
+
+  operation a:f32[87,3] b:f32[87,3] = cond[
+  branches=(
+    { lambda ; c:f32[87,3]. let
+        d:f32[87,3] = broadcast_in_dim 0.0:f32[]
+      in (c, d) }
+    { lambda ; e:f32[87,3]. let
+        f:f32[87,3] = stop_gradient e
+        g:f32[87,3] = broadcast_in_dim 0.0:f32[]
+        _:f32[87,3] = broadcast_in_dim 0.0:f32[]
+      in (f, g) }
+  )
+] 0:i32[] h
+    from line /home/jovyan/privado/engine_dgx/fitting.py:21:68 (loss)
+
+  operation b:f32[128,23] c:i32[1] = jit[
+  name=_take
+  jaxpr={ lambda ; a:f32[1,128,23] d:i32[]. let
+      e:bool[] = lt d 0:i32[]
+      f:i32[] = add d 1:i32[]
+      g:i32[] = jit[
+        name=_where
+        jaxpr={ lambda ; e:bool[] f:i32[] d:i32[]. let
+            g:i32[] = select_n e d f
+          in (g,) }
+      ] e f d
+      c:i32[1] = broadcast_in_dim g
+      b:f32[128,23] = gather[
+        dimension_numbers=GatherDimensionNumbers(offset_dims=(0, 1), collapsed_slice_dims=(0,), start_index_map=(0,), operand_batching_dims=(), start_indices_batching_dims=())
+        fill_value=nan
+        indices_are_sorted=False
+        mode=GatherScatterMode.FILL_OR_DROP
+        slice_sizes=(1, 128, 23)
+        unique_indices=False
+      ] a c
+    in (b, c) }
+] a 0:i32[]
+    from line /home/jovyan/privado/engine_dgx/fitting.py:21:68 (loss)
+
+  operation b:f32[128] c:i32[1] = jit[
+  name=_take
+  jaxpr={ lambda ; a:f32[1,128] d:i32[]. let
+      e:bool[] = lt d 0:i32[]
+      f:i32[] = add d 1:i32[]
+      g:i32[] = jit[
+        name=_where
+        jaxpr={ lambda ; e:bool[] f:i32[] d:i32[]. let
+            g:i32[] = select_n e d f
+          in (g,) }
+      ] e f d
+      c:i32[1] = broadcast_in_dim g
+      b:f32[128] = gather[
+        dimension_numbers=GatherDimensionNumbers(offset_dims=(0,), collapsed_slice_dims=(0,), start_index_map=(0,), operand_batching_dims=(), start_indices_batching_dims=())
+        fill_value=nan
+        indices_are_sorted=False
+        mode=GatherScatterMode.FILL_OR_DROP
+        slice_sizes=(1, 128)
+        unique_indices=False
+      ] a c
+    in (b, c) }
+] a 0:i32[]
+    from line /home/jovyan/privado/engine_dgx/fitting.py:21:68 (loss)
+
+(Additional originating lines are not shown.)
+See https://docs.jax.dev/en/latest/errors.html#jax.errors.TracerBoolConversionError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/jovyan/privado/engine_dgx/main.py", line 77, in process_video
+    raw_data = engine.process_video(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/engine_dgx/gait_engine.py", line 147, in process_video
+    angles_3d, timestamps_jax = self.calculate_kinematics(pose3d_ordered)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/engine_dgx/gait_engine.py", line 69, in calculate_kinematics
+    updated_model, _metrics = fit_model(fkw, dataset)
+                              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/engine_dgx/fitting.py", line 82, in fit_model
+    val, model, opt_state, metrics = step(
+                                     ^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/equinox/_jit.py", line 209, in __call__
+    return _call(self, False, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/equinox/_jit.py", line 263, in _call
+    marker, _, _ = out = jit_wrapper._cached(
+                         ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/engine_dgx/fitting.py", line 45, in step
+    updates, opt_state = optimizer.update(grads, opt_state, params)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/optax/transforms/_combining.py", line 90, in update_fn
+    updates, new_s = fn(updates, s, params, **extra_args)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/optax/transforms/_combining.py", line 90, in update_fn
+    updates, new_s = fn(updates, s, params, **extra_args)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/optax/_src/base.py", line 339, in update
+    return tx.update(updates, state, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovyan/privado/envs/gait_env/lib/python3.11/site-packages/optax/_src/transform.py", line 294, in update_fn
+    mu_hat = optax.tree.bias_correction(mu, b1, count_inc)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Exception raised while checking equality of metadata fields of pytree. Make sure that metadata fields are hashable and have simple equality semantics. (Note: arrays cannot be passed as metadata fields!)
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+INFO:     179.108.163.211:0 - "POST /process HTTP/1.1" 500 Internal Server Error
