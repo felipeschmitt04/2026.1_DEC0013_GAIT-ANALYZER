@@ -4,13 +4,12 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProtecaoPaciente } from "@/components/ProtecaoPaciente";
 import { usePaciente } from "@/app/PacienteContext";
-import { UploadCloud, FileVideo, X, CheckCircle2, Tag } from "lucide-react";
+import { UploadCloud, FileVideo, X, CheckCircle2, Tag, Smartphone, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export default function NovaAnalisePage() {
-  // 🌟 O pacienteAtivo agora é um objeto { id, nome } ou null
   const { pacienteAtivo, setAnaliseAtiva } = usePaciente(); 
   const router = useRouter();
   
@@ -18,6 +17,10 @@ export default function NovaAnalisePage() {
   const [file, setFile] = useState<File | null>(null);
   const [nomeAnalise, setNomeAnalise] = useState("");
   const [enviando, setEnviando] = useState(false);
+  
+  // 🌟 ADICIONADO: Estado para controlar a orientação do vídeo ("em-pe" ou "deitado")
+  const [orientacao, setOrientacao] = useState<"em-pe" | "deitado">("em-pe");
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onButtonClick = () => {
@@ -66,21 +69,19 @@ export default function NovaAnalisePage() {
   };
 
   const handleAnalisar = async () => {
-    // 🌟 CORRIGIDO: Verifica se o ID do paciente ativo existe no objeto do contexto
     if (!file || !nomeAnalise || !pacienteAtivo?.id) return;
     
     try {
       setEnviando(true);
 
-      // 🚀 VANTAGEM DO NOVO CONTEXTO: O id já está na mão!
-      // Removemos todo aquele fetch pesado que consultava a lista de pacientes.
       const resAnalise = await fetch("/api/analises", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome: nomeAnalise,
-          pacienteId: pacienteAtivo.id, // ID direto daqui!
-          videoName: file.name
+          pacienteId: pacienteAtivo.id,
+          videoName: file.name,
+          orientacao: orientacao // 🚀 ENVIANDO PARA O BACK-END: "em-pe" ou "deitado"
         }),
       });
 
@@ -178,8 +179,8 @@ export default function NovaAnalisePage() {
           )}
         </div>
 
-        {/* RODAPÉ: NOME DA MARCHA E BOTÃO */}
-        <div className="mt-8 flex items-center gap-4 bg-white p-2 rounded-2xl">
+        {/* RODAPÉ: INPUT, SELETOR DE ORIENTAÇÃO E BOTÃO DE ENVIO */}
+        <div className="mt-8 flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm">
           <div className="relative flex-1 group">
             <Tag className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
             <Input 
@@ -190,6 +191,33 @@ export default function NovaAnalisePage() {
               className="h-14 pl-12 rounded-xl border-slate-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />
           </div>
+
+          {/* 🌟 ADICIONADO: Botão Seletor de Orientação (Muda entre Em Pé / Deitado) */}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={enviando}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOrientacao((prev) => (prev === "em-pe" ? "deitado" : "em-pe"));
+            }}
+            className={cn(
+              "h-14 px-5 rounded-xl border font-semibold flex items-center gap-2 transition-all active:scale-95",
+              orientacao === "em-pe" 
+                ? "border-emerald-200 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800" 
+                : "border-blue-200 bg-blue-50/40 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+            )}
+          >
+            {orientacao === "em-pe" ? (
+              <>
+                <Smartphone size={18} /> Vídeo: Em Pé
+              </>
+            ) : (
+              <>
+                <Monitor size={18} /> Vídeo: Deitado
+              </>
+            )}
+          </Button>
 
           <Button
             disabled={!file || !nomeAnalise || enviando}

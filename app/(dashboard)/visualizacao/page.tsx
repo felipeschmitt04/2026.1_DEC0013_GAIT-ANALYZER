@@ -11,21 +11,22 @@ interface SegmentoCorporal {
   descricao: string;
 }
 
+// 🌟 ATUALIZADO: Foco clínico exato em Perna Direita, Perna Esquerda e Tronco
 const segmentos: SegmentoCorporal[] = [
   {
-    id: "membro-inferior",
-    titulo: "Membro Inferior",
-    descricao: "Análise de marcha, joelho, tornozelo e pisada.",
+    id: "perna-direita",
+    titulo: "Perna Direita",
+    descricao: "Análise cinemática do joelho, tornozelo, quadril e ciclo de pisada do lado direito.",
   },
   {
-    id: "membro-superior",
-    titulo: "Membro Superior",
-    descricao: "Cinemática de ombro, cotovelo e alcance.",
+    id: "perna-esquerda",
+    titulo: "Perna Esquerda",
+    descricao: "Análise cinemática do joelho, tornozelo, quadril e ciclo de pisada do lado esquerdo.",
   },
   {
     id: "tronco-coluna",
     titulo: "Tronco & Coluna",
-    descricao: "Postura, inclinação sagital e estabilidade central.",
+    descricao: "Avaliação de postura, inclinação sagital, oscilação lateral e estabilidade central.",
   },
 ];
 

@@ -1,29 +1,27 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server' // resposta
+import type { NextRequest } from 'next/server' //dados
 
-// 🌟 CORRIGIDO: O nome da função agora é exatamente 'proxy' para alinhar com o Next.js
 export async function proxy(request: NextRequest) {
   const userRole = request.cookies.get('user-role')?.value;
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl; // endereço depois de 3000
 
   const isAuthenticated = !!userRole;
 
-  // ⚠️ REGRAS PARA O ADMINISTRADOR (/admin)
+  // se não é admin vai pro login-admin
   if (pathname.startsWith('/admin')) {
     if (!isAuthenticated || userRole !== 'admin') {
       return NextResponse.redirect(new URL('/login-admin', request.url));
     }
   }
 
-  // 📋 REGRAS PARA PÁGINAS GERAIS DO DASHBOARD
   const rotasDashboard = ['/pacientes', '/configuracoes', '/visualizacao', '/nova-analise', '/relatorio'];
-  const acessandoDashboard = rotasDashboard.some(rota => pathname.startsWith(rota));
+  const acessandoDashboard = rotasDashboard.some(rota => pathname.startsWith(rota)); // estado de acesso, testa cada rota
 
   if (!isAuthenticated && acessandoDashboard) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // 🧠 REDIRECIONAMENTO INTELIGENTE (EVITAR TELA DE LOGIN SE JÁ LOGADO)
+  // evita fazer login logado
   if (isAuthenticated && (pathname === '/login' || pathname === '/login-admin')) {
     const homeDestino = userRole === 'admin' ? '/admin/profissionais' : '/pacientes';
     return NextResponse.redirect(new URL(homeDestino, request.url));
@@ -32,6 +30,7 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+// não roda em api e imaagens
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
