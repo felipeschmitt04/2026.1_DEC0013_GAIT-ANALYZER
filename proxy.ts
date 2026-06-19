@@ -1,34 +1,30 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export default function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
+// 🌟 CORRIGIDO: O nome da função agora é exatamente 'proxy' para alinhar com o Next.js
+export async function proxy(request: NextRequest) {
   const userRole = request.cookies.get('user-role')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthenticated = !!token;
+  const isAuthenticated = !!userRole;
 
-  //REGRAS PARA O ADMINISTRADOR
+  // ⚠️ REGRAS PARA O ADMINISTRADOR (/admin)
   if (pathname.startsWith('/admin')) {
-    // Se tentar acessar qualquer rota de /admin sem ser admin, chuta para o login-admin
     if (!isAuthenticated || userRole !== 'admin') {
       return NextResponse.redirect(new URL('/login-admin', request.url));
     }
   }
 
-  //  REGRAS PARA PÁGINAS GERAIS DO DASHBOARD (/pacientes, /configuracoes, etc)
-  // Protege contra usuários não logados
-  const rotasDashboard = ['/pacientes', '/configuracoes', '/visualizacao', '/nova-analise', '/historico'];
+  // 📋 REGRAS PARA PÁGINAS GERAIS DO DASHBOARD
+  const rotasDashboard = ['/pacientes', '/configuracoes', '/visualizacao', '/nova-analise', '/relatorio'];
   const acessandoDashboard = rotasDashboard.some(rota => pathname.startsWith(rota));
 
   if (!isAuthenticated && acessandoDashboard) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  //EVITAR LOGIN DUPLICADO E REDIRECIONAMENTO INTELIGENTE
+  // 🧠 REDIRECIONAMENTO INTELIGENTE (EVITAR TELA DE LOGIN SE JÁ LOGADO)
   if (isAuthenticated && (pathname === '/login' || pathname === '/login-admin')) {
-    // Se o admin tentar entrar na tela de login, manda para profissionais
-    // Se o usuário comum tentar, manda para pacientes
     const homeDestino = userRole === 'admin' ? '/admin/profissionais' : '/pacientes';
     return NextResponse.redirect(new URL(homeDestino, request.url));
   }
@@ -37,6 +33,5 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Mantém a proteção em tudo, exceto arquivos internos e estáticos
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

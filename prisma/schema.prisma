@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profissional {
+  id            String     @id @default(uuid())
+  nome          String
+  especialidade String
+  registro      String     @unique
+  observacoes   String?
+  email         String     @unique
+  senha         String
+  role          String     @default("user")
+  criadoEm      DateTime   @default(now())
+  atualizadoEm  DateTime   @updatedAt
+  ativo         Boolean?   @default(true)
+  pacientes     Paciente[]
+}
+
+model Paciente {
+  id             String       @id @default(uuid())
+  nome           String
+  cpf            String       @unique
+  dataNascimento String
+  criadoEm       DateTime     @default(now())
+  profissionalId String
+  ativo          Boolean?     @default(true)
+  genero         String?
+  peso           Float?       @map("peso")
+  observacoes    String?
+  telefone       String?
+  altura         Float?       @map("altura")
+  analises       Analise[]
+  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+}
+
+model Analise {
+  id          String   @id @default(uuid())
+  nome        String
+  data        String
+  videoUrl    String?
+  cadencia    String   @default("0")
+  comprimento String   @default("0")
+  velocidade  String   @default("0")
+  simetria    String   @default("0")
+  criadoEm    DateTime @default(now())
+  pacienteId  String
+  paciente    Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+}

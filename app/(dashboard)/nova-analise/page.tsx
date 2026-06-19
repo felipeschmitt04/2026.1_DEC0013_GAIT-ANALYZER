@@ -3,20 +3,21 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProtecaoPaciente } from "@/components/ProtecaoPaciente";
-import { usePaciente } from "@/app/PacienteContext"; // Importando o hook
+import { usePaciente } from "@/app/PacienteContext";
 import { UploadCloud, FileVideo, X, CheckCircle2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export default function NovaAnalisePage() {
-  // Pegamos o setAnaliseAtiva do contexto aqui
+  // 🌟 O pacienteAtivo agora é um objeto { id, nome } ou null
   const { pacienteAtivo, setAnaliseAtiva } = usePaciente(); 
   const router = useRouter();
   
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [nomeAnalise, setNomeAnalise] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onButtonClick = () => {
@@ -64,15 +65,37 @@ export default function NovaAnalisePage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // FUNÇÃO CORRIGIDA AQUI
-  const handleAnalisar = () => {
-    if (!file || !nomeAnalise) return;
+  const handleAnalisar = async () => {
+    // 🌟 CORRIGIDO: Verifica se o ID do paciente ativo existe no objeto do contexto
+    if (!file || !nomeAnalise || !pacienteAtivo?.id) return;
     
-    // 1. Avisamos o sistema global qual é o nome da análise
-    setAnaliseAtiva(nomeAnalise); 
-    
-    // 2. Agora sim, redirecionamos
-    router.push("/visualizacao");
+    try {
+      setEnviando(true);
+
+      // 🚀 VANTAGEM DO NOVO CONTEXTO: O id já está na mão!
+      // Removemos todo aquele fetch pesado que consultava a lista de pacientes.
+      const resAnalise = await fetch("/api/analises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: nomeAnalise,
+          pacienteId: pacienteAtivo.id, // ID direto daqui!
+          videoName: file.name
+        }),
+      });
+
+      if (resAnalise.ok) {
+        setAnaliseAtiva(nomeAnalise); 
+        router.push("/visualizacao");
+      } else {
+        alert("Erro ao salvar a análise no servidor.");
+      }
+    } catch (error: any) {
+      console.error(error);
+      alert("Ocorreu um erro no processamento.");
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -108,12 +131,19 @@ export default function NovaAnalisePage() {
             accept="video/mp4"
             className="hidden"
             onChange={handleChange}
+            disabled={enviando}
           />
 
           {file && (
             <button 
-              onClick={removeFile}
-              className="absolute top-6 right-6 bg-slate-100 hover:bg-red-100 hover:text-red-600 transition-colors rounded-full p-2 text-slate-500 z-20 shadow-sm"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeFile(e);
+              }}
+              className="absolute top-6 right-6 bg-slate-100 hover:bg-red-100 hover:text-red-600 transition-colors rounded-full p-2 text-slate-500 z-30 shadow-sm"
+              disabled={enviando}
             >
               <X size={24} />
             </button>
@@ -156,16 +186,17 @@ export default function NovaAnalisePage() {
               placeholder="Dê um nome para esta análise (ex: Caminhada Pós-Cirúrgica 01)"
               value={nomeAnalise}
               onChange={(e) => setNomeAnalise(e.target.value)}
+              disabled={enviando}
               className="h-14 pl-12 rounded-xl border-slate-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />
           </div>
 
           <Button
-            disabled={!file || !nomeAnalise}
+            disabled={!file || !nomeAnalise || enviando}
             onClick={handleAnalisar}
             className="h-14 px-10 rounded-xl text-lg font-bold bg-slate-900 hover:bg-slate-800 shadow-xl disabled:opacity-50 disabled:bg-slate-300 transition-all active:scale-95 text-white flex items-center gap-2"
           >
-            Analisar Marcha
+            {enviando ? "Processando..." : "Analisar Marcha"}
           </Button>
         </div>
       </div>

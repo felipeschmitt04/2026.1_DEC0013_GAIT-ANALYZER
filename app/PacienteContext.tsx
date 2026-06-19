@@ -2,18 +2,38 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 
+// 🌟 Interface para estruturar o objeto do paciente ativo
+interface PacienteAtivo {
+  id: string
+  nome: string
+}
+
 interface PacienteContextType {
-  pacienteAtivo: string | null
-  setPacienteAtivo: (nome: string | null) => void
-  analiseAtiva: string | null            // Nova propriedade
-  setAnaliseAtiva: (nome: string | null) => void // Nova propriedade
+  pacienteAtivo: PacienteAtivo | null
+  setPacienteAtivo: (paciente: PacienteAtivo | null) => void
+  analiseAtiva: string | null            
+  setAnaliseAtiva: (nome: string | null) => void 
 }
 
 const PacienteContext = createContext<PacienteContextType | undefined>(undefined)
 
 export function PacienteProvider({ children }: { children: ReactNode }) {
-  const [pacienteAtivo, setPacienteAtivo] = useState<string | null>(null)
+  const [pacienteAtivo, setPacienteAtivoState] = useState<PacienteAtivo | null>(null)
   const [analiseAtiva, setAnaliseAtiva] = useState<string | null>(null)
+
+  // 🌟 NOVO: substitui o setPacienteAtivo "cru" por uma versão que também
+  // reseta a análise ativa sempre que o paciente muda (ou é deslogado/null).
+  // Isso evita que uma análise de um paciente antigo continue "presa"
+  // depois de selecionar outro paciente.
+  const setPacienteAtivo = (paciente: PacienteAtivo | null) => {
+    setPacienteAtivoState((pacienteAnterior) => {
+      // Só reseta a análise se o paciente realmente mudou (id diferente)
+      if (pacienteAnterior?.id !== paciente?.id) {
+        setAnaliseAtiva(null)
+      }
+      return paciente
+    })
+  }
 
   return (
     <PacienteContext.Provider 

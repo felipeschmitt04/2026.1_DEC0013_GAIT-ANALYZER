@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 
 export function AppSidebar() {
+  // 🌟 O pacienteAtivo agora é um objeto. Vamos ler o ID dele para a validação lógica.
   const { pacienteAtivo } = usePaciente();
   const [isAdmin, setIsAdmin] = React.useState(false);
 
@@ -66,7 +67,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const isLocked = item.protected && !pacienteAtivo;
+                // 🌟 CORRIGIDO: Agora verifica especificamente se o ID existe dentro do objeto do paciente ativo
+                const isLocked = item.protected && !pacienteAtivo?.id;
 
                 return (
                   <SidebarMenuItem key={item.title}>

@@ -1,35 +1,52 @@
 "use client";
 
-import { useEffect } from "react"; 
+import { useState } from "react"; 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
   const router = useRouter()
 
-  // Limpa os cookies de autenticação e cargo ao entrar na tela de login
-  useEffect(() => {
-    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  }, []);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const entrarNoSistema = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    // Define o cookie de autenticação padrão (profissional comum)
-    document.cookie = "auth-token=true; path=/; SameSite=Lax";
+  const entrarNoSistema = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    router.push("/pacientes");
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erro ao fazer login.");
+      }
+
+      // 🌟 REMOVIDO: setIsAdmin(...) — não existe no PacienteContext e quebrava o login.
+      // A role já fica salva no cookie "user-role" pela própria API de login,
+      // e a página de pacientes lê esse cookie diretamente (getCookie).
+      if (data.role === "admin") {
+        router.push("/admin/profissionais");
+      } else {
+        router.push("/pacientes");
+      }
+    } catch (err: any) {
+      setError(err.message || "E-mail ou senha incorretos.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,12 +54,17 @@ export default function LoginPage() {
       <Card className="mx-auto max-w-sm shadow-xl border-slate-200 rounded-2xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">Login</CardTitle>
-          <CardDescription>
-            Digite seu e-mail abaixo para acessar sua conta
-          </CardDescription>
+          <CardDescription>Digite seu e-mail abaixo para acessar sua conta</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={entrarNoSistema} className="grid gap-4">
+            
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                {error}
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-slate-700">Email</Label>
               <Input
@@ -50,17 +72,16 @@ export default function LoginPage() {
                 type="email"
                 placeholder="nome@exemplo.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
                 className="rounded-xl border-slate-200"
               />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Senha</Label>
-                {/* Link atualizado para a nova rota de esqueci-senha */}
-                <Link 
-                  href="/esqueci-senha" 
-                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline"
-                >
+                <Link href="/esqueci-senha" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline">
                   Esqueceu sua senha?
                 </Link>
               </div>
@@ -68,22 +89,18 @@ export default function LoginPage() {
                 id="password" 
                 type="password" 
                 required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
                 className="rounded-xl border-slate-200"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 rounded-xl transition-all active:scale-95"
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 rounded-xl transition-all active:scale-95 disabled:opacity-70"
             >
-              Entrar
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50" 
-              onClick={() => entrarNoSistema()}
-              type="button"
-            >
-              Entrar com Google
+              {loading ? "Carregando..." : "Entrar"}
             </Button>
           </form>
         </CardContent>
