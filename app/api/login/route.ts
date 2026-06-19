@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db"; // 🌟 RESTAURADO: Import direto e limpo no topo!
+import { db } from "@/lib/db";
 
 const ADMIN_EMAIL = "admin@teste.com";
 const ADMIN_SENHA = "admin123";
@@ -17,7 +17,6 @@ export async function POST(request: Request) {
 
     const emailTratado = email.toLowerCase().trim();
 
-    // 👤 1. AUTENTICAÇÃO DO ADMIN FIXO (Temporário até criarmos no banco)
     if (emailTratado === ADMIN_EMAIL) {
       if (password === ADMIN_SENHA) {
         const response = NextResponse.json({
@@ -34,8 +33,6 @@ export async function POST(request: Request) {
           sameSite: "lax",
         });
 
-        // 🌟 NOVO: o admin é fixo e não tem registro no banco, então não setamos user-id.
-        // Garantimos que não sobra um user-id de um login anterior de outro profissional.
         response.cookies.set("user-id", "", {
           path: "/",
           maxAge: 0,
@@ -50,12 +47,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // 👥 2. AUTENTICAÇÃO DOS PROFISSIONAIS
     const profissional = await db.profissional.findUnique({
       where: { email: emailTratado },
     });
 
-    // 🌟 Bloqueia se o profissional não existir, se a senha estiver errada OU se estiver inativo
+    //  Bloqueia se o profissional não existir, se a senha estiver errada OU se estiver inativo
     if (!profissional || profissional.senha !== password || !profissional.ativo) {
       return NextResponse.json(
         { message: "E-mail ou senha incorretos." },
@@ -77,7 +73,6 @@ export async function POST(request: Request) {
       sameSite: "lax",
     });
 
-    // 🌟 NOVO: salva o ID do profissional logado em um cookie próprio.
     // É assim que a tela de Configurações vai saber QUAL profissional buscar na API.
     response.cookies.set("user-id", profissional.id, {
       path: "/",

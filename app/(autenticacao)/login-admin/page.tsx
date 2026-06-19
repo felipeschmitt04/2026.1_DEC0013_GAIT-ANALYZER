@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🚀 REMOVIDO: O fetch automático de logout foi retirado para evitar conflitos de sessão durante o redirecionamento
+  
 
   const entrarComoAdmin = async (e: React.FormEvent) => {
     e.preventDefault();

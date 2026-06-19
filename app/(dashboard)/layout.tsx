@@ -23,7 +23,6 @@ export default function DashboardLayout({
             
             {/* Título Dinâmico */}
             <h1 className="text-sm font-medium transition-all">
-              {/* 🌟 CORRIGIDO: Verifica se o objeto e o nome existem, e exibe o texto correto */}
               {pacienteAtivo?.nome 
                 ? `Paciente selecionado: ${pacienteAtivo.nome}` 
                 : "Selecione um paciente"}

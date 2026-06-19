@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-// 1. LISTAR PACIENTES DO BANCO (Apenas os Ativos)
 export async function GET() {
   try {
     const pacientes = await db.paciente.findMany({
       where: {
-        ativo: true, // FILTRO: Traz todos os pacientes que estão ativos
+        ativo: true, // Traz todos os pacientes que estão ativos
       },
       orderBy: { nome: "asc" },
     });
     
-    // Mapeia o banco para o exato formato que o seu Front-end espera
     const pacientesFormatados = pacientes.map((p: any) => ({
       id: p.id,
       nome: p.nome,
@@ -32,19 +30,16 @@ export async function GET() {
   }
 }
 
-// 2. CADASTRAR NOVO PACIENTE
 export async function POST(request: Request) {
   try {
     const { nome, dataNascimento, cpf, genero, peso, altura, telefone, observacoes, profissionalId, profissionalId: altId } = await request.json();
 
-    // Aceita tanto profissionalId quanto profesionalId por segurança contra erros de digitação
     const idEnviado = profissionalId || altId;
 
     if (!nome || !dataNascimento) {
       return NextResponse.json({ message: "Nome e data de nascimento são obrigatórios." }, { status: 400 });
     }
 
-    // 🌟 RESOLUÇÃO DO ERRO P2003 (Foreign Key):
     let idDoProfissionalFinal = idEnviado;
 
     // Se o front não enviou nada ou mandou o ID estático de teste, pegamos o primeiro médico do banco
@@ -96,7 +91,7 @@ export async function POST(request: Request) {
   }
 }
 
-// 3. ALTERAR DADOS DO PACIENTE
+// alterar paciente
 export async function PUT(request: Request) {
   try {
     const { id, nome, dataNascimento, cpf, genero, peso, altura, telefone, observacoes } = await request.json();
@@ -129,7 +124,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// 4. EXCLUSÃO LÓGICA
+// excluir
 export async function PATCH(request: Request) {
   try {
     const { id } = await request.json();

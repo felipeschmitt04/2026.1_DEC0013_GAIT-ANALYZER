@@ -28,15 +28,14 @@ import {
 } from "@/components/ui/sidebar";
 
 export function AppSidebar() {
-  // 🌟 O pacienteAtivo agora é um objeto. Vamos ler o ID dele para a validação lógica.
   const { pacienteAtivo } = usePaciente();
   const [isAdmin, setIsAdmin] = React.useState(false);
-
+  // verifica se é um admin
   React.useEffect(() => {
     const checkAdmin = document.cookie.includes("user-role=admin");
     setIsAdmin(checkAdmin);
   }, []);
-
+  // ... esconde o profissionais, protected proibe se nao tiver paciene selecionado
   const items = [
     { title: "Pacientes", url: "/pacientes", icon: User, protected: false },
     ...(isAdmin ? [{ title: "Profissionais", url: "/admin/profissionais", icon: UserCog, protected: false }] : []),
@@ -47,6 +46,7 @@ export function AppSidebar() {
   ];
 
   return (
+    // logo
     <Sidebar collapsible="icon" className="border-r border-slate-200 bg-white">
       <SidebarHeader className="p-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
@@ -67,13 +67,14 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                // 🌟 CORRIGIDO: Agora verifica especificamente se o ID existe dentro do objeto do paciente ativo
+                // aqui verifica tudo
                 const isLocked = item.protected && !pacienteAtivo?.id;
 
                 return (
                   <SidebarMenuItem key={item.title}>
                     {isLocked ? (
                       <SidebarMenuButton 
+                      // desativa clique e troca botão do mouse
                         disabled
                         className="flex items-center gap-3 opacity-80 cursor-not-allowed select-none hover:bg-transparent"
                       >
@@ -83,7 +84,7 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     ) : (
                       <SidebarMenuButton 
-                        asChild 
+                        asChild // isso evita que cria botão novo, só altera o existente
                         tooltip={item.title}
                         className="hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                       >

@@ -18,48 +18,48 @@ export default function ModeloCanvas({ segmentoId }: ModeloCanvasProps) {
     const largura = container.clientWidth;
     const altura = container.clientHeight;
 
-    // 1. CENA
+  
     const cena = new THREE.Scene();
 
-    // 2. CÂMERA
+
     const camera = new THREE.PerspectiveCamera(75, largura / altura, 0.1, 1000);
     camera.position.z = 5;
 
-    // 3. RENDERIZADOR
+   
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(largura, altura);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // 4. CONTROLES (Girar, Zoom com Scroll e Arrastar)
+
     const controles = new OrbitControls(camera, renderer.domElement);
     controles.enableDamping = true;
     controles.dampingFactor = 0.05;
 
-    // 5. SELEÇÃO DINÂMICA DA GEOMETRIA (Cubo, Esfera ou Pirâmide)
+ 
     let geometria: THREE.BufferGeometry;
 
     if (segmentoId === "perna-direita") {
-      // 🧊 Perna Direita = Cubo
+  
       geometria = new THREE.BoxGeometry(2, 2, 2);
     } else if (segmentoId === "perna-esquerda") {
-      // 🔮 Perna Esquerda = Esfera
+ 
       geometria = new THREE.SphereGeometry(1.3, 32, 32);
     } else {
-      // 🔺 Tronco / Padrão = Pirâmide (Cone com 4 lados)
+
       geometria = new THREE.ConeGeometry(1.5, 2.5, 4);
     }
 
-    // Material estilo "Teia de Linhas" (Wireframe) para parecer scan de IA
+  
     const material = new THREE.MeshStandardMaterial({ 
-      color: 0x10b981, // Esmeralda do seu tema
+      color: 0x10b981, 
       wireframe: true 
     });
     
     const objeto3D = new THREE.Mesh(geometria, material);
     cena.add(objeto3D);
 
-    // 6. LUZES
+ 
     const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.8);
     cena.add(luzAmbiente);
 
@@ -67,7 +67,7 @@ export default function ModeloCanvas({ segmentoId }: ModeloCanvasProps) {
     luzDirecional.position.set(5, 5, 5);
     cena.add(luzDirecional);
 
-    // 7. LOOP DE ANIMAÇÃO
+  
     const clock = new THREE.Clock();
     let idAnimacao: number;
 
@@ -85,7 +85,7 @@ export default function ModeloCanvas({ segmentoId }: ModeloCanvasProps) {
 
     animar();
 
-    // 8. REDIMENSIONAMENTO
+    
     const tratarRedimensionamento = () => {
       const novaLargura = container.clientWidth;
       const novaAltura = container.clientHeight;
@@ -96,7 +96,7 @@ export default function ModeloCanvas({ segmentoId }: ModeloCanvasProps) {
 
     window.addEventListener("resize", tratarRedimensionamento);
 
-    // LIMPEZA DE MEMÓRIA
+
     return () => {
       window.removeEventListener("resize", tratarRedimensionamento);
       cancelAnimationFrame(idAnimacao);
@@ -107,7 +107,7 @@ export default function ModeloCanvas({ segmentoId }: ModeloCanvasProps) {
         container.removeChild(renderer.domElement);
       }
     };
-  }, [segmentoId]); // 🌟 RE-RENDERIZA SE O SEGMENTO MUDAR!
+  }, [segmentoId]); 
 
   return <div ref={containerRef} className="w-full h-full" />;
 }

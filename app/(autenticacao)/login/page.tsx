@@ -34,9 +34,6 @@ export default function LoginPage() {
         throw new Error(data.message || "Erro ao fazer login.");
       }
 
-      // 🌟 REMOVIDO: setIsAdmin(...) — não existe no PacienteContext e quebrava o login.
-      // A role já fica salva no cookie "user-role" pela própria API de login,
-      // e a página de pacientes lê esse cookie diretamente (getCookie).
       if (data.role === "admin") {
         router.push("/admin/profissionais");
       } else {

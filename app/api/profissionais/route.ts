@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db"; // 🌟 Import limpo e direto no topo!
+import { db } from "@/lib/db"; 
 
-// 📋 1. LISTAR PROFISSIONAIS (Apenas os Ativos)
+
 export async function GET() {
   try {
     const profissionais = await db.profissional.findMany({
       where: {
-        ativo: true, // 🌟 FILTRO: Traz apenas profissionais que não foram arquivados
+        ativo: true, 
       },
       select: {
         id: true,
@@ -14,8 +14,8 @@ export async function GET() {
         especialidade: true,
         registro: true,
         observacoes: true,
-        email: true, // Necessário para exibir na ficha
-        senha: true, // Necessário para exibir na ficha
+        email: true, 
+        senha: true, 
       },
       orderBy: { nome: "asc" },
     });
@@ -27,7 +27,7 @@ export async function GET() {
   }
 }
 
-// 💾 2. CADASTRAR NOVO PROFISSIONAL
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -38,10 +38,10 @@ export async function POST(request: Request) {
         especialidade: body.especialidade,
         registro: body.registro,
         email: body.email,
-        senha: body.senha, // Nota: Lembre-se de criptografar essa senha no futuro com bcrypt!
+        senha: body.senha,
         role: body.role || "profissional",
         observacoes: body.observacoes,
-        ativo: true, // Garante que nasce ativo por padrão
+        ativo: true, 
       },
     });
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 }
 
-// 🆙 3. ALTERAR DADOS DO PROFISSIONAL
+// alterar
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
@@ -87,7 +87,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// 🗑️ 4. EXCLUSÃO LÓGICA (DESATIVAR PROFISSIONAL)
+// excluir
 export async function PATCH(request: Request) {
   try {
     const { id } = await request.json();

@@ -47,7 +47,6 @@ function calcularIdade(dataNasc: string): string {
   }
 }
 
-// 🌟 NOVO: função utilitária para ler um cookie pelo nome diretamente no navegador
 function getCookie(nome: string): string | null {
   if (typeof document === "undefined") return null
   const match = document.cookie.match(new RegExp(`(^| )${nome}=([^;]+)`))
@@ -64,7 +63,6 @@ export default function PacientesPage() {
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
 
-  // 🌟 NOVO: estado com a role do usuário logado (lido do cookie "user-role")
   const [role, setRole] = useState<string | null>(null)
   
   const profesionalIdLogado = "id-do-profissional-temporario" 
@@ -82,7 +80,7 @@ export default function PacientesPage() {
 
   useEffect(() => {
     carregarPacientes();
-    setRole(getCookie("user-role")); // 🌟 NOVO: lê a role assim que a página carrega
+    setRole(getCookie("user-role")); 
   }, []);
 
   useEffect(() => {
@@ -581,9 +579,7 @@ export default function PacientesPage() {
                     </Button>
                   ) : (
                     <>
-                      {/* 🌟 ALTERADO: grid muda para 1 ou 2 colunas dependendo se o botão "Apagar" aparece */}
                       <div className={role === "admin" ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"}>
-                        {/* 🌟 NOVO: botão "Apagar Paciente" só aparece se role === "admin" */}
                         {role === "admin" && (
                           <button
                             type="button"

@@ -11,7 +11,6 @@ interface SegmentoCorporal {
   descricao: string;
 }
 
-// 🌟 ATUALIZADO: Foco clínico exato em Perna Direita, Perna Esquerda e Tronco
 const segmentos: SegmentoCorporal[] = [
   {
     id: "perna-direita",

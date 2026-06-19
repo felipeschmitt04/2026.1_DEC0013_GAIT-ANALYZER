@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
+// fica na aba, descrição é basidor de código
 export const metadata: Metadata = {
   title: "Gait Analyzer | Projeto PI",
   description: "Sistema de análise de marcha 3D",
@@ -25,6 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // os envelopes, tooltipprovider é do shadcn/ui, os balões
     <html lang="pt-br" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <body className="min-h-screen bg-background">
         <PacienteProvider>

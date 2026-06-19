@@ -18,7 +18,6 @@ export default function NovaAnalisePage() {
   const [nomeAnalise, setNomeAnalise] = useState("");
   const [enviando, setEnviando] = useState(false);
   
-  // 🌟 ADICIONADO: Estado para controlar a orientação do vídeo ("em-pe" ou "deitado")
   const [orientacao, setOrientacao] = useState<"em-pe" | "deitado">("em-pe");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +80,7 @@ export default function NovaAnalisePage() {
           nome: nomeAnalise,
           pacienteId: pacienteAtivo.id,
           videoName: file.name,
-          orientacao: orientacao // 🚀 ENVIANDO PARA O BACK-END: "em-pe" ou "deitado"
+          orientacao: orientacao 
         }),
       });
 
@@ -192,7 +191,6 @@ export default function NovaAnalisePage() {
             />
           </div>
 
-          {/* 🌟 ADICIONADO: Botão Seletor de Orientação (Muda entre Em Pé / Deitado) */}
           <Button
             type="button"
             variant="outline"

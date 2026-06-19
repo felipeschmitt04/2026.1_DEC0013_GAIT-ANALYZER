@@ -1,7 +1,8 @@
+// gera pacotes
 generator client {
   provider = "prisma-client-js"
 }
-
+// motor, e aonde está endereço e senha
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -28,7 +29,7 @@ model Paciente {
   cpf            String       @unique
   dataNascimento String
   criadoEm       DateTime     @default(now())
-  profissionalId String
+  profissionalId String?
   ativo          Boolean?     @default(true)
   genero         String?
   peso           Float?       @map("peso")
@@ -36,7 +37,7 @@ model Paciente {
   telefone       String?
   altura         Float?       @map("altura")
   analises       Analise[]
-  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  profissional   Profissional? @relation(fields: [profissionalId], references: [id], onDelete: SetNull)
 }
 
 model Analise {

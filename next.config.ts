@@ -1,12 +1,12 @@
 import type { NextConfig } from "next";
-
+// manda a raiz para o login
 const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
         source: '/',
         destination: '/login',
-        permanent: true,
+        permanent: true, // deixa fixo no servidor
       },
     ];
   },

@@ -33,7 +33,6 @@ interface DadosAnalise {
   simetria: string;
 }
 
-// 🌟 NOVO: Isola o conteúdo que usa useSearchParams para não quebrar a página
 function ConteudoVisualizacao() {
   const { pacienteAtivo, analiseAtiva } = usePaciente();
   const [metricas, setMetricas] = useState<DadosAnalise | null>(null);
@@ -216,7 +215,6 @@ function ConteudoVisualizacao() {
   );
 }
 
-// 🌟 COMPONENTE PRINCIPAL EXPORTADO (Envolve tudo no Suspense exigido pelo Next.js)
 export default function Visualizacao3DPage() {
   return (
     <ProtecaoPaciente>

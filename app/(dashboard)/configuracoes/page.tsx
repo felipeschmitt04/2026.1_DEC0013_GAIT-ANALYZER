@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePaciente } from "@/app/PacienteContext";
 
-// 🌟 Mesma função utilitária usada na página de pacientes, para ler cookies
+
 function getCookie(nome: string): string | null {
   if (typeof document === "undefined") return null
   const match = document.cookie.match(new RegExp(`(^| )${nome}=([^;]+)`))
@@ -32,13 +32,13 @@ export default function ConfiguracoesPage() {
 
   const [role, setRole] = useState<string | null>(null);
 
-  // 🌟 NOVO: dados reais do profissional logado, vindos da API
+  
   const [perfil, setPerfil] = useState<Profissional | null>(null);
   const [carregandoPerfil, setCarregandoPerfil] = useState(true);
   const [modoEdicaoPerfil, setModoEdicaoPerfil] = useState(false);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
 
-  // 🌟 NOVO: campos do formulário de edição do perfil
+
   const [formNome, setFormNome] = useState("");
   const [formEspecialidade, setFormEspecialidade] = useState("");
   const [formRegistro, setFormRegistro] = useState("");
@@ -58,7 +58,7 @@ export default function ConfiguracoesPage() {
     setRole(getCookie("user-role"));
   }, []);
 
-  // 🌟 NOVO: assim que soubermos a role, se for profissional, busca o perfil dele
+  // assim que soubermos a role, se for profissional, busca o perfil dele
   useEffect(() => {
     if (role === null) return; // ainda não leu o cookie
 
@@ -91,7 +91,7 @@ export default function ConfiguracoesPage() {
       .finally(() => setCarregandoPerfil(false));
   }, [role]);
 
-  // 1. AÇÃO DE LOGOUT
+  // logout
   const handleLogout = () => {
     if (!confirm("Deseja realmente sair?")) return;
     setPacienteAtivo(null);
@@ -102,7 +102,6 @@ export default function ConfiguracoesPage() {
     router.push("/login");
   };
 
-  // 🌟 NOVO: salva as alterações do perfil chamando o PUT que já existe em /api/profissionais
   const handleSalvarPerfil = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil) return;
@@ -154,7 +153,7 @@ export default function ConfiguracoesPage() {
   return (
     <div className="p-10 max-w-4xl mx-auto w-full grid gap-6">
 
-      {/* 🌟 NOVO: Card de Perfil — só aparece para profissionais (não-admin) */}
+      {/* Card de Perfil */}
       {role !== "admin" && perfil && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">

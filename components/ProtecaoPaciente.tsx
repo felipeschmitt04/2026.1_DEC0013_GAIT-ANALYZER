@@ -17,7 +17,7 @@ export function ProtecaoPaciente({ children }: { children: ReactNode }) {
       // Se tem paciente, libera a visualização
       setPodeExibir(true);
     }
-  }, [pacienteAtivo, router]);
+  }, [pacienteAtivo, router]);// se mudar paciente roda de novo
 
   // Enquanto o useEffect checa a proteção, não mostra nada (evita o "flash" da página proibida)
   if (!podeExibir) return null;

@@ -19,7 +19,6 @@ export default function EsqueciSenhaPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Aqui no futuro você conectará com seu serviço de e-mail (Firebase, Auth.js, etc)
     setEnviado(true);
   };
 

@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Analise {
-  id: string; // Atualizado para string (UUID do Prisma)
+  id: string;
   nome: string;
-  data: string; // Formato YYYY-MM-DD
+  data: string; 
 }
 
 export default function RelatoriosPage() {
-  // 🌟 O pacienteAtivo agora é um objeto { id, nome } ou null
+
   const { pacienteAtivo, setAnaliseAtiva } = usePaciente();
   const router = useRouter();
 
@@ -23,17 +23,15 @@ export default function RelatoriosPage() {
   const [selecionadaLocal, setSelecionadaLocal] = useState<Analise | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🚀 Busca as análises do paciente ativo no Supabase
+
   useEffect(() => {
-    // 🌟 Ajustado para verificar se o id do paciente ativo existe no contexto
+  
     if (!pacienteAtivo?.id) return;
 
     const carregarHistorico = async () => {
       try {
         setLoading(true);
         
-        // 🔥 SUPER OTIMIZAÇÃO: Não precisamos mais do 'fetch("/api/pacientes")'! 
-        // O id do paciente já está disponível direto no contexto global.
         const resAnalises = await fetch("/api/analises");
         if (resAnalises.ok) {
           const todasAnalises = await resAnalises.json();
