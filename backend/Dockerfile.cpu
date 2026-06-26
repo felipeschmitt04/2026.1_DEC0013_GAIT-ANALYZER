@@ -1,0 +1,40 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    git \
+    libegl1 \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG REQUIREMENTS_FILE=requirements.api.txt
+
+COPY backend/requirements.api.txt ./requirements.api.txt
+COPY backend/requirements.cpu.txt ./requirements.cpu.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
+
+COPY backend/app ./app
+COPY backend/storage ./storage
+COPY backend/tests ./tests
+
+ENV APP_ENV=production
+ENV APP_HOST=0.0.0.0
+ENV APP_PORT=8000
+ENV UPLOAD_DIR=storage/uploads
+ENV RESULTS_DIR=storage/results
+ENV TEMP_DIR=storage/temp
+ENV WINDOW_L=150
+ENV CORS_ORIGINS=*
+ENV USE_MOCK_ENGINE=true
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

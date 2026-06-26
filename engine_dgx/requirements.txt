@@ -1,0 +1,24 @@
+fastapi==0.136.0
+uvicorn==0.44.0
+python-multipart==0.0.26
+pydantic==2.13.2
+
+# O ambiente conda da DGX ja deve conter as dependencias pesadas abaixo.
+# Este arquivo serve como referencia/documentacao, nao como instalacao obrigatoria.
+numpy==2.4.4
+opencv-python==4.13.0.92
+tensorflow==2.21.0
+tensorflow-hub==0.16.1
+tf_keras==2.21.0
+jax==0.10.0
+jaxlib==0.10.0
+jax-cuda12-plugin==0.10.0
+jax-cuda12-pjrt==0.10.0
+equinox==0.13.7
+optax==0.2.8
+jaxtyping==0.3.9
+tqdm==4.66.4
+mujoco==3.7.0
+mujoco-mjx==3.7.0
+monocular_demos @ git+https://github.com/IntelligentSensingAndRehabilitation/monocular-demos.git@336603e45ecb8f02e48bc630378de08a5a7a0395
+gait_transformer @ git+https://github.com/peabody124/GaitTransformer@bd39b4c8924903647ed1f5ba5c1ae5c49ce32dff

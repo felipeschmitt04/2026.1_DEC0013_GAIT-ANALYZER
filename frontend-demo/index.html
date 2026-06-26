@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gait Analyzer - Demo 3D</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <h1>Gait Analyzer</h1>
+            <p>Visualizador Three.js para fitting + pose3d</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <label class="file-button">
+            <input id="json-file" type="file" accept="application/json,.json" />
+            JSON local
+          </label>
+          <input
+            id="job-id"
+            class="job-input"
+            type="text"
+            placeholder="job_id"
+            autocomplete="off"
+          />
+          <button id="fetch-job" type="button">Buscar API</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="sidebar">
+          <section>
+            <h2>Resultado</h2>
+            <dl class="stats">
+              <div>
+                <dt>Status</dt>
+                <dd id="job-status">sample</dd>
+              </div>
+              <div>
+                <dt>Frames</dt>
+                <dd id="frame-count">30</dd>
+              </div>
+              <div>
+                <dt>Juntas</dt>
+                <dd id="joint-count">17</dd>
+              </div>
+              <div>
+                <dt>Fitting</dt>
+                <dd id="fitting-count">40 coord.</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h2>Timeline</h2>
+            <div class="timeline-row">
+              <button id="play-toggle" type="button">Pausar</button>
+              <span id="frame-label">Frame 1 / 30</span>
+            </div>
+            <input id="frame-slider" type="range" min="0" max="29" value="0" />
+            <div class="speed-control">
+              <div class="speed-row">
+                <label for="playback-speed">Velocidade</label>
+                <span id="playback-speed-value">0.50x</span>
+              </div>
+              <input
+                id="playback-speed"
+                type="range"
+                min="0.25"
+                max="1.5"
+                step="0.05"
+                value="0.5"
+              />
+            </div>
+          </section>
+
+          <section>
+            <h2>Metricas</h2>
+            <dl class="metrics">
+              <div>
+                <dt>Joelho dir.</dt>
+                <dd id="knee-right">-</dd>
+              </div>
+              <div>
+                <dt>Joelho esq.</dt>
+                <dd id="knee-left">-</dd>
+              </div>
+              <div>
+                <dt>Tornozelos</dt>
+                <dd id="ankle-distance">-</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h2>Coordenada Fitting</h2>
+            <select id="coordinate-select" class="coordinate-select"></select>
+            <canvas id="coordinate-chart" class="coordinate-chart"></canvas>
+            <p id="coordinate-value" class="coordinate-value">-</p>
+          </section>
+        </aside>
+
+        <section class="scene-panel">
+          <canvas id="scene"></canvas>
+          <div id="message" class="message">
+            Amostra interna carregada. Use um JSON do backend para validar a demo.
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
