@@ -165,12 +165,49 @@ A parte preenchida neste PR é a documentação do backend. A pasta
 `docs/frontend/` fica reservada para a documentação do frontend, que será
 mantida pelo responsável dessa parte.
 
-Arquivos principais do backend:
+Índice da documentação do backend:
 
-- [Índice](docs/backend/pt-br/00-indice.md)
-- [Visão Geral](docs/backend/pt-br/01-visao-geral.md)
-- [Arquitetura](docs/backend/pt-br/02-arquitetura.md)
-- [Docker CPU](docs/backend/pt-br/08-docker.md)
-- [Contrato da API](docs/backend/pt-br/10-api.md)
-- [DGX UFSC](docs/backend/pt-br/11-dgx-ufsc.md)
-- [Testes](docs/backend/pt-br/15-testes.md)
+1. [Visão Geral](docs/backend/pt-br/01-visao-geral.md)
+   Contexto do projeto, objetivo acadêmico, ambientes conhecidos e estado atual.
+
+2. [Arquitetura](docs/backend/pt-br/02-arquitetura.md)
+   Fluxos de dados, separação entre frontend, backend, mock e worker DGX.
+
+3. [Criação da VM na Azure](docs/backend/pt-br/03-criacao-vm-azure.md)
+   Reservado para o guia de criação da VM.
+
+4. [Conexão via SSH](docs/backend/pt-br/04-conexao-ssh.md)
+   Acesso remoto à VM ou DGX por terminal.
+
+5. [GitHub, SSH e Deploy Key](docs/backend/pt-br/05-github-ssh-deploy-key.md)
+   Configuração de acesso ao repositório em ambientes sem interface gráfica.
+
+6. [Configuração do Ambiente](docs/backend/pt-br/06-configuracao-ambiente.md)
+   Variáveis de ambiente, dependências, perfis de execução e storage.
+
+7. [Execução sem Docker](docs/backend/pt-br/07-execucao-sem-docker.md)
+   Execução direta do backend, worker DGX e demo local.
+
+8. [Docker CPU](docs/backend/pt-br/08-docker.md)
+   Build e execução da imagem CPU/mock.
+
+9. [Deploy](docs/backend/pt-br/09-deploy.md)
+   Atualização do backend na Azure e conexão com DGX quando necessário.
+
+10. [Contrato da API](docs/backend/pt-br/10-api.md)
+    Endpoints, parâmetros, `ResultV1`, `pose3d`, `fitting`, `model3d` e exemplos.
+
+11. [DGX UFSC](docs/backend/pt-br/11-dgx-ufsc.md)
+    Execução da engine pesada na DGX com conda e `engine_dgx/`.
+
+12. [Segurança](docs/backend/pt-br/12-seguranca.md)
+    Cuidados com `.env`, chaves, dados de vídeo, CORS, portas e URLs temporárias.
+
+13. [Troubleshooting](docs/backend/pt-br/13-troubleshooting.md)
+    Problemas comuns e caminhos de diagnóstico.
+
+14. [Evidências do Sprint 2](docs/backend/pt-br/14-evidencias-sprint2.md)
+    Registro dos testes de Docker CPU, mock, API e contrato JSON.
+
+15. [Testes](docs/backend/pt-br/15-testes.md)
+    Tipos de teste e comandos de validação do projeto.
