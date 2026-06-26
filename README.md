@@ -39,8 +39,10 @@ engine_dgx/
 frontend-demo/
 └── index.html              # Demo Three.js para inspecionar ResultV1
 
-docs/pt-br/
-└── 00-indice.md            # Documentação principal em português
+docs/
+├── backend/                # Documentação desta entrega/backend
+│   └── pt-br/00-indice.md  # Índice principal em português
+└── frontend/               # Reservado para documentação do frontend
 ```
 
 Estrutura interna principal do backend:
@@ -152,24 +154,23 @@ Retorna o resultado salvo do job.
 
 ## Documentação
 
-A documentação principal está em português:
+A documentação está separada por área do projeto:
 
 ```text
-docs/pt-br/00-indice.md
+docs/backend/
+docs/frontend/
 ```
 
-Arquivos mais importantes:
+A parte preenchida neste PR é a documentação do backend. A pasta
+`docs/frontend/` fica reservada para a documentação do frontend, que será
+mantida pelo responsável dessa parte.
 
-- [Visão Geral](docs/pt-br/01-visao-geral.md)
-- [Arquitetura](docs/pt-br/02-arquitetura.md)
-- [Docker CPU](docs/pt-br/08-docker.md)
-- [Contrato da API](docs/pt-br/10-api.md)
-- [DGX UFSC](docs/pt-br/11-dgx-ufsc.md)
-- [Testes](docs/pt-br/15-testes.md)
+Arquivos principais do backend:
 
-## Próximas Etapas
-
-- Criar testes leves para `/health`, metadata, mock engine e fluxo `/analyze`.
-- Validar novamente o Docker CPU em ambiente de PR.
-- Manter `docs/pt-br/10-api.md` sincronizado com mudanças no contrato.
-- Usar `engine_dgx/` como fonte do fluxo pesado na DGX.
+- [Índice](docs/backend/pt-br/00-indice.md)
+- [Visão Geral](docs/backend/pt-br/01-visao-geral.md)
+- [Arquitetura](docs/backend/pt-br/02-arquitetura.md)
+- [Docker CPU](docs/backend/pt-br/08-docker.md)
+- [Contrato da API](docs/backend/pt-br/10-api.md)
+- [DGX UFSC](docs/backend/pt-br/11-dgx-ufsc.md)
+- [Testes](docs/backend/pt-br/15-testes.md)
