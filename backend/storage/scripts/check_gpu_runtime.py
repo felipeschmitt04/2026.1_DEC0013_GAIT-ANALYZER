@@ -1,4 +1,4 @@
-"""Diagnostico rapido do runtime GPU usado pelo Docker experimental."""
+"""Diagnostico rapido do runtime pesado em ambientes com GPU."""
 
 import os
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def main() -> None:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
     os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
     os.environ.setdefault("TF_FORCE_GPU_ALLOW_GROWTH", "true")

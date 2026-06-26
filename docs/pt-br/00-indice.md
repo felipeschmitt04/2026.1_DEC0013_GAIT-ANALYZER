@@ -1,55 +1,72 @@
 # Documentação do Projeto
 
-Este diretório contém a documentação técnica do sistema de análise de marcha humana com processamento híbrido GPU/CPU.
+Este diretório reúne a documentação técnica do backend de análise de marcha.
+O objetivo é deixar claro como o sistema está organizado, como executar cada
+parte e qual contrato deve ser consumido pelo frontend.
 
-O objetivo desta documentação é registrar todo o processo de desenvolvimento, configuração, execução e implantação do sistema, incluindo a criação da máquina virtual na Azure, conexão via SSH, integração com GitHub, configuração do ambiente, execução do backend, containerização com Docker, deploy e troubleshooting.
+O estado atual do projeto é:
+
+- backend FastAPI em `backend/`;
+- Docker CPU leve para API em modo mock, usado na Azure e em integração;
+- engine pesada em `engine_dgx/`, executada na DGX por ambiente conda;
+- frontend web externo consumindo somente a API HTTP;
+- demo local em `frontend-demo/` para inspecionar o JSON e a visualização 3D.
 
 ## Índice
 
 1. [Visão Geral](01-visao-geral.md)
-   Apresenta o contexto do projeto, seus objetivos, requisitos principais e divisão geral entre frontend, backend, nuvem e processamento local.
+   Contexto do projeto, objetivo acadêmico, ambientes conhecidos e estado atual.
 
 2. [Arquitetura](02-arquitetura.md)
-   Descreve a arquitetura do sistema, o fluxo de dados, a comunicação entre frontend e backend, o uso da GPU em nuvem e a organização dos módulos internos.
+   Fluxos de dados, separação entre frontend, backend, mock e worker DGX.
 
 3. [Criação da VM na Azure](03-criacao-vm-azure.md)
-   Documenta o processo de criação da máquina virtual utilizada para executar o backend em nuvem.
+   Reservado para o guia de criação da VM. Este arquivo não foi alterado nesta
+   organização porque o material principal está em outra máquina.
 
 4. [Conexão via SSH](04-conexao-ssh.md)
-   Explica como acessar a VM remotamente por SSH em ambiente headless.
+   Acesso remoto à VM ou DGX por terminal.
 
 5. [GitHub, SSH e Deploy Key](05-github-ssh-deploy-key.md)
-   Descreve como configurar o acesso ao repositório GitHub a partir da VM ou da DGX sem interface gráfica.
+   Como preparar acesso ao repositório em ambientes sem interface gráfica.
 
 6. [Configuração do Ambiente](06-configuracao-ambiente.md)
-   Registra a instalação das dependências do sistema, ambiente Python, bibliotecas de IA e variáveis de ambiente.
+   Variáveis de ambiente, dependências, perfis de execução e estrutura de storage.
 
 7. [Execução sem Docker](07-execucao-sem-docker.md)
-   Explica como executar o backend diretamente na VM antes da containerização.
+   Como executar backend, worker DGX e demo local diretamente.
 
-8. [Docker](08-docker.md)
-   Documenta a criação do Dockerfile, docker-compose, configuração com GPU e execução containerizada.
+8. [Docker CPU](08-docker.md)
+   Como construir e rodar a imagem CPU/mock. Docker GPU não é o caminho atual.
 
 9. [Deploy](09-deploy.md)
-   Descreve o processo de atualização do código no servidor, inicialização da API e exposição do serviço para o frontend.
+   Fluxo prático para atualizar o backend na Azure e apontar para a DGX quando
+   necessário.
 
-10. [API](10-api.md)
-    Documenta os endpoints disponíveis, parâmetros de entrada, formato de resposta e exemplos de requisição.
+10. [Contrato da API](10-api.md)
+    Endpoints, parâmetros, `ResultV1`, `pose3d`, `fitting`, `model3d` e exemplos.
 
 11. [DGX UFSC](11-dgx-ufsc.md)
-    Registra os testes realizados na DGX H100 compartilhada da UFSC, incluindo acesso, limitações e diferenças em relação à Azure VM.
+    Como a engine pesada roda na DGX usando conda e a pasta `engine_dgx/`.
 
 12. [Segurança](12-seguranca.md)
-    Apresenta cuidados com chaves SSH, arquivos `.env`, credenciais, dados de pacientes, portas expostas e boas práticas de repositório.
+    Cuidados com `.env`, chaves, dados de vídeo, CORS, portas e URLs temporárias.
 
 13. [Troubleshooting](13-troubleshooting.md)
-    Lista erros comuns encontrados durante o desenvolvimento e suas respectivas soluções.
+    Problemas comuns e caminhos de diagnóstico.
 
-## Idiomas
+14. [Evidências do Sprint 2](14-evidencias-sprint2.md)
+    Registro dos testes de Docker CPU, mock, API e contrato JSON.
 
-A documentação está organizada em duas versões:
+15. [Testes](15-testes.md)
+    Explicação dos tipos de teste e como rodar validações no projeto.
 
-* `docs/pt-br/`: documentação em português.
-* `docs/en/`: documentação em inglês.
+## Observações de manutenção
 
-Sempre que possível, os arquivos em português e inglês devem manter a mesma estrutura para facilitar manutenção e comparação.
+- A documentação em português é a fonte principal para este projeto acadêmico.
+- A documentação em inglês pode ficar atrasada em relação ao português.
+- O frontend deve depender do contrato em `10-api.md`, não de caminhos internos
+  do servidor.
+- O Docker suportado no momento é o CPU/mock em `backend/Dockerfile.cpu`.
+- A DGX não usa Docker neste projeto; ela roda a engine por conda em
+  `engine_dgx/`.
