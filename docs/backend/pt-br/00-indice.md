@@ -63,7 +63,9 @@ O estado atual do projeto é:
 
 ## Observações de manutenção
 
-- A documentação em português é a fonte principal para este projeto acadêmico.
+- A documentação do backend fica em `docs/backend/`.
+- A documentação do frontend fica reservada em `docs/frontend/`.
+- A documentação em português é a fonte principal para esta entrega do backend.
 - A documentação em inglês pode ficar atrasada em relação ao português.
 - O frontend deve depender do contrato em `10-api.md`, não de caminhos internos
   do servidor.
