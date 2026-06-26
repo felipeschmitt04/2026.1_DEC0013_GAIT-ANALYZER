@@ -111,4 +111,4 @@ curl http://localhost:8000/results/SEU_JOB_ID
 - Não expor o worker DGX diretamente para o frontend.
 - Não depender de Docker GPU na DGX.
 - Não versionar `.env`, vídeos, resultados ou URL temporária de túnel.
-- Não trocar o contrato JSON sem atualizar `docs/pt-br/10-api.md`.
+- Não trocar o contrato JSON sem atualizar `docs/backend/pt-br/10-api.md`.
