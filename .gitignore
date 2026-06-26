@@ -36,6 +36,9 @@ secrets.json
 *.log
 logs/
 
+# Notebooks and exploratory files
+*.ipynb
+
 # Generated media and ML artifacts
 *.mp4
 *.mov
