@@ -61,6 +61,9 @@ O estado atual do projeto é:
 15. [Testes](15-testes.md)
     Explicação dos tipos de teste e como rodar validações no projeto.
 
+16. [Decisoes de Inferencia DGX](16-decisoes-inferencia-dgx.md)
+    Registro das decisoes aprovadas para fila, DGX pull-based, cache e banco.
+
 ## Observações de manutenção
 
 - A documentação do backend fica em `docs/backend/`.

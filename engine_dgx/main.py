@@ -6,6 +6,7 @@ from threading import Lock
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from worker_engine import get_engine
 
@@ -68,6 +69,47 @@ async def clear_cache():
     return {"status": "ok", "message": "Caches JAX/Equinox limpos"}
 
 
+def process_job_file(current_job_id: str, upload_path: Path, height_mm: int, rotated: bool = False):
+    result_dir = RESULTS_DIR / current_job_id
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Job %s recebido. Iniciando engine pesada", current_job_id)
+
+    previous_cwd = Path.cwd()
+    with process_lock:
+        clear_accelerator_caches()
+        try:
+            os.chdir(result_dir)
+            engine = get_engine()
+            raw_data = engine.process_video(
+                video_path=str(upload_path),
+                height_mm=height_mm,
+                rotated=rotated,
+            )
+        except Exception:
+            logger.exception("Falha no processamento do job %s", current_job_id)
+            raise
+        finally:
+            os.chdir(previous_cwd)
+            clear_accelerator_caches()
+
+    artifacts = {}
+    for filename, key in (
+        ("3d_rebuild.mp4", "video_3d"),
+        ("movimento_exportado.npz", "movement_npz"),
+    ):
+        artifact_path = result_dir / filename
+        if artifact_path.exists():
+            artifacts[key] = f"/results/{current_job_id}/artifacts/{filename}"
+
+    return {
+        "job_id": current_job_id,
+        "status": "completed",
+        "raw_data": raw_data,
+        "artifacts": artifacts,
+    }
+
+
 @app.post("/process")
 async def process_video(
     video: UploadFile = File(...),
@@ -89,38 +131,24 @@ async def process_video(
     with upload_path.open("wb") as buffer:
         shutil.copyfileobj(video.file, buffer)
 
-    logger.info("Job %s recebido. Iniciando engine pesada", current_job_id)
+    try:
+        return process_job_file(
+            current_job_id=current_job_id,
+            upload_path=upload_path,
+            height_mm=height_mm,
+            rotated=rotated,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    previous_cwd = Path.cwd()
-    with process_lock:
-        clear_accelerator_caches()
-        try:
-            os.chdir(result_dir)
-            engine = get_engine()
-            raw_data = engine.process_video(
-                video_path=str(upload_path),
-                height_mm=height_mm,
-                rotated=rotated,
-            )
-        except Exception as exc:
-            logger.exception("Falha no processamento do job %s", current_job_id)
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-        finally:
-            os.chdir(previous_cwd)
-            clear_accelerator_caches()
+@app.get("/results/{job_id}/artifacts/{filename}")
+async def get_result_artifact(job_id: str, filename: str):
+    allowed_filenames = {"3d_rebuild.mp4", "movimento_exportado.npz"}
+    if filename not in allowed_filenames:
+        raise HTTPException(status_code=404, detail="Artefato nao encontrado")
 
-    artifacts = {}
-    for filename, key in (
-        ("3d_rebuild.mp4", "video_3d"),
-        ("movimento_exportado.npz", "movement_npz"),
-    ):
-        artifact_path = result_dir / filename
-        if artifact_path.exists():
-            artifacts[key] = str(artifact_path)
+    artifact_path = RESULTS_DIR / job_id / filename
+    if not artifact_path.exists():
+        raise HTTPException(status_code=404, detail="Artefato nao encontrado")
 
-    return {
-        "job_id": current_job_id,
-        "status": "completed",
-        "raw_data": raw_data,
-        "artifacts": artifacts,
-    }
+    return FileResponse(artifact_path)

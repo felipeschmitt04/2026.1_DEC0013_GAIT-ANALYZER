@@ -15,16 +15,26 @@ APP_PORT=8000
 UPLOAD_DIR=storage/uploads
 RESULTS_DIR=storage/results
 TEMP_DIR=storage/temp
+JOBS_DIR=storage/jobs
 
 WINDOW_L=150
+MAX_UPLOAD_MB=200
 
 USE_MOCK_ENGINE=false
 ENGINE_MODE=local
 REMOTE_ENGINE_URL=http://localhost:9000
 REMOTE_ENGINE_TIMEOUT_S=3600
+WORKER_TOKEN=change-me
+WORKER_CLAIM_TTL_S=900
 
 CORS_ORIGINS=*
 ```
+
+## Uploads
+
+`MAX_UPLOAD_MB` define o tamanho maximo aceito no endpoint `POST /analyze`. O valor padrao e 200 MB. Se o arquivo passar desse limite, a API retorna HTTP 413 antes de processar o video.
+
+O backend aceita os formatos comuns `mp4`, `mov`, `avi` e `mkv`. Requisicoes com tipos claramente incompativeis retornam HTTP 415.
 
 ## Seleção Da Engine
 
@@ -80,6 +90,7 @@ O backend cria e usa estas pastas:
 ```text
 backend/storage/uploads/
 backend/storage/results/
+backend/storage/jobs/
 backend/storage/temp/
 ```
 
@@ -87,9 +98,27 @@ Essas pastas possuem `.gitkeep`, mas o conteúdo gerado em runtime não deve ser
 versionado. Vídeos, resultados, `.npz`, `.npy` e modelos pesados ficam fora do
 Git.
 
+## Limpeza Manual Do Storage
+
+Para auditar arquivos antigos sem apagar nada:
+
+```bash
+cd backend
+python storage/scripts/cleanup_storage.py --older-than-days 7
+```
+
+Para apagar os candidatos listados, rode explicitamente com `--delete`:
+
+```bash
+cd backend
+python storage/scripts/cleanup_storage.py --older-than-days 7 --delete
+```
+
+O script so aceita caminhos dentro de `backend/storage` e roda em modo dry-run por padrao.
+
 ## Ambiente DGX
 
-Na DGX, o fluxo atual usa conda e a pasta `engine_dgx/`. O ambiente deve conter
+Na DGX, o fluxo atual usa conda e a pasta `engine_dgx/`. Para o fluxo pull-based, execute `pull_worker.py` apontando `BACKEND_URL` para a API central. O ambiente deve conter
 TensorFlow, TensorFlow Hub, JAX, Equinox, Optax, MuJoCo/MJX, MeTRAbs e
 GaitTransformer.
 

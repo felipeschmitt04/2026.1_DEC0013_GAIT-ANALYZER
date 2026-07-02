@@ -37,6 +37,8 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
         job.duration_ms = int((job.finished_at - job.started_at).total_seconds() * 1000)
 
     logger.debug("Job criado, entrando no try")
+    input_summary = None
+    quality_info = None
 
     try:
         logger.info("Extraindo metadados")
@@ -102,6 +104,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
                 fitting=build_fitting_payload(raw_data["kinematics"]),
                 model3d=raw_data.get("model3d"),
                 metricas_clinicas=calculate_clinical_metrics(raw_data["pose3d"]),
+                artifacts=raw_data.get("artifacts"),
                 video_3d=None,
             )
 
@@ -147,3 +150,24 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
         finish_job(status="failed", stage="ingest")
 
         return ResultV1(result_version="1.0", job=job, error=error_info)
+
+    except Exception as e:
+        logger.exception("Falha inesperada no pipeline")
+
+        error_info = ErrorInfo(
+            code="ERROR_PIPELINE_FAILED",
+            message="Falha inesperada durante o processamento do video",
+            stage=job.stage,
+            retryable=True,
+            details=f"{type(e).__name__}: {e}",
+        )
+
+        finish_job(status="failed", stage=job.stage)
+
+        return ResultV1(
+            result_version="1.0",
+            job=job,
+            error=error_info,
+            input_summary=input_summary,
+            quality_info=quality_info,
+        )

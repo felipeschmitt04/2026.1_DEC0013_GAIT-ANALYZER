@@ -9,7 +9,7 @@ não está disponível para o aluno nesse ambiente.
 A DGX roda somente o worker de engine:
 
 ```text
-Backend central -> Engine DGX Worker -> raw_data -> Backend central
+Backend central cria job -> DGX Pull Worker busca job -> raw_data -> Backend central monta ResultV1
 ```
 
 O frontend não chama a DGX diretamente.
@@ -24,16 +24,18 @@ engine_dgx/
 
 Principais arquivos:
 
-- `main.py`: API FastAPI do worker;
+- `main.py`: API FastAPI do worker para teste direto/debug;
+- `pull_worker.py`: worker que consulta a API central e processa jobs;
 - `worker_engine.py`: singleton que carrega a engine uma vez;
 - `gait_engine.py`: MeTRAbs, GaitTransformer, fitting e exportação;
 - `fitting.py`: ajuste JAX/Equinox/Optax;
 - `model3d_export.py`: monta `raw_data.model3d`;
 - `requirements.txt`: referência de dependências Python.
 
-## Subir O Worker
+## Subir O Worker Para Teste Direto
 
-Na DGX:
+Na DGX, este modo sobe uma API local do worker. Ele e util para debug ou teste
+controlado:
 
 ```bash
 conda activate gait_env
@@ -54,6 +56,34 @@ curl -X POST http://localhost:9000/warmup
 ```
 
 Esse comando pode demorar porque carrega modelos pesados.
+
+## Rodar O Fluxo Pull-Based Recomendado
+
+No backend central/Azure, configure:
+
+```env
+ENGINE_MODE=queue
+WORKER_TOKEN=um-token-forte
+```
+
+Na DGX, aponte o worker para a API central:
+
+```bash
+conda activate gait_env
+cd engine_dgx
+export BACKEND_URL=http://IP-OU-DOMINIO-DA-API:8000
+export WORKER_TOKEN=um-token-forte
+export WORKER_ID=dgx-h100-ufsc
+python pull_worker.py
+```
+
+O worker faz polling em `/worker/jobs/next`, baixa o video, executa a engine com
+lock de um job por vez e envia o resultado de volta para `/worker/jobs/{job_id}/result`.
+
+A limpeza de caches JAX/Equinox antes e depois de cada job deve ser mantida. Ela
+foi adicionada porque, no ambiente real, processar videos diferentes em sequencia
+sem essa limpeza gerou erro.
+
 
 ## Processar Um Vídeo Diretamente No Worker
 
@@ -86,9 +116,9 @@ O retorno tem este formato geral:
 
 O backend central transforma `raw_data` em `ResultV1`.
 
-## Conectar Backend Central À DGX
+## Conectar Backend Central A DGX Em Modo Direto
 
-No backend central:
+Este modo e secundario. No backend central:
 
 ```env
 ENGINE_MODE=remote

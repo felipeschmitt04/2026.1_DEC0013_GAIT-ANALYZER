@@ -17,9 +17,11 @@ htmlcov/
 
 backend/storage/uploads/*
 backend/storage/results/*
+backend/storage/jobs/*
 backend/storage/temp/*
 !backend/storage/uploads/.gitkeep
 !backend/storage/results/.gitkeep
+!backend/storage/jobs/.gitkeep
 !backend/storage/temp/.gitkeep
 
 *.mp4

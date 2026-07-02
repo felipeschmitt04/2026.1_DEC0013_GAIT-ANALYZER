@@ -24,17 +24,18 @@ continuar iguais.
 
 ```text
 1. Frontend envia video + altura para POST /analyze
-2. Backend processa o video e retorna ResultV1
-3. Frontend guarda job.job_id
-4. Frontend usa data.model3d para animacao 3D quando disponivel
-5. Frontend usa data.fitting para graficos biomecanicos e fallback visual
-6. Frontend usa data.metricas_clinicas para graficos/relatorio clinico
-7. Frontend pode buscar novamente o resultado em GET /results/{job_id}
+2. Em modo mock/local/remoto direto, backend processa e retorna `ResultV1` final
+3. Em modo fila, backend retorna `ResultV1` com `job.status=queued`
+4. Frontend guarda job.job_id
+5. Frontend consulta `GET /status/{job_id}` ate `completed`
+6. Frontend busca `GET /results/{job_id}` quando o resultado estiver pronto
+7. Frontend usa `data.model3d`, `data.fitting`, `data.pose3d` e `data.metricas_clinicas` conforme disponibilidade
 ```
 
-No momento o processamento e sincrono: `POST /analyze` ja retorna o resultado
-final quando o job termina. O endpoint `/status/{job_id}` existe para consulta
-e compatibilidade futura, mas nao ha fila assincrona ainda.
+O processamento pode ser sincrono ou por fila, dependendo de `ENGINE_MODE`. Em
+`mock`, `local` e `remote`, `POST /analyze` tende a retornar o resultado final.
+Em `queue`, `POST /analyze` retorna rapidamente com `job.status=queued`, e a DGX
+busca o trabalho pelos endpoints internos `/worker/*`.
 
 ## Endpoints
 
@@ -71,6 +72,8 @@ Campos:
 Regras:
 
 - `height_mm` deve ser maior que zero.
+- O tamanho maximo do upload e configurado por `MAX_UPLOAD_MB`; acima disso a API retorna HTTP 413.
+- Formatos claramente incompativeis retornam HTTP 415.
 - O video precisa abrir no OpenCV.
 - Videos com FPS baixo, baixa resolucao ou duracao curta podem gerar warnings,
   mas ainda podem ser processados.
@@ -87,6 +90,31 @@ curl -F video=@meu_video.mp4 \
 ```
 
 Resposta `200`: objeto `ResultV1`.
+
+
+### GET /jobs
+
+Lista jobs conhecidos pelo backend a partir do filesystem local (`storage/results`, `storage/uploads` e `storage/jobs`). Este endpoint nao usa banco de dados e serve para auditoria local, debug e validacao de demo.
+
+Resposta `200`:
+
+```json
+{
+  "total": 1,
+  "jobs": [
+    {
+      "job_id": "41449887-c694-4c5d-aa1c-bd98110bea75",
+      "status": "completed",
+      "stage": "finished",
+      "has_result": true,
+      "has_model3d": true,
+      "artifacts": {
+        "movement_npz": "/results/41449887-c694-4c5d-aa1c-bd98110bea75/artifacts/movimento_exportado.npz"
+      }
+    }
+  ]
+}
+```
 
 ### GET /status/{job_id}
 
@@ -110,15 +138,21 @@ Possiveis `status`:
 
 | Status | Significado |
 | --- | --- |
-| `running` | Job criado e iniciado. |
+| `queued` | Job salvo aguardando worker. |
+| `claimed` | Worker assumiu o job. |
+| `running` | Worker/pipeline em execucao. |
 | `processing` | Video validado e pipeline em execucao. |
 | `completed` | Resultado final disponivel. |
+| `failed_retryable` | Falha reportada pelo worker, mas tentativa futura ainda e aceitavel. |
 | `failed` | Falha de validacao ou processamento. |
 
 Possiveis `stage` atuais:
 
 | Stage | Significado |
 | --- | --- |
+| `waiting_worker` | Job em fila aguardando DGX. |
+| `claimed` | Job assumido por worker. |
+| `processing` | Worker processando o video. |
 | `ingest` | Recepcao/validacao inicial do video. |
 | `fase_1` | Processamento principal da engine. |
 | `finished` | Resultado final salvo. |
@@ -148,6 +182,26 @@ Nomes aceitos:
 
 Observacao: a visualizacao web nao deve depender de `3d_rebuild.mp4`. O caminho
 principal e usar `data.fitting` para animar o modelo 3D interativo no navegador.
+
+## Endpoints Internos Do Worker DGX
+
+Estes endpoints nao sao para o frontend. Eles existem para o fluxo pull-based em
+que a DGX consulta a API central e processa jobs sem ser exposta publicamente.
+Quando `WORKER_TOKEN` estiver configurado, todas as chamadas devem enviar o
+header `X-Worker-Token`.
+
+| Endpoint | Uso |
+| --- | --- |
+| `GET /worker/jobs/next` | Retorna o proximo job `queued` ou um job stale que voltou para a fila. |
+| `POST /worker/jobs/{job_id}/claim` | Marca o job como assumido por um worker. Body: `worker_id`. |
+| `POST /worker/jobs/{job_id}/heartbeat` | Atualiza heartbeat/status enquanto a DGX processa. |
+| `GET /worker/jobs/{job_id}/input` | Baixa o `input.mp4` salvo pela API. |
+| `POST /worker/jobs/{job_id}/result` | Envia `raw_result.json` e artefatos opcionais para o backend montar `ResultV1`. |
+| `POST /worker/jobs/{job_id}/failed` | Reporta falha estruturada da DGX. |
+
+A fila atual e filesystem-first, sem banco de dados. O estado fica em
+`backend/storage/jobs/{job_id}/job.json`, e o resultado final fica em
+`backend/storage/results/{job_id}/result.json`.
 
 ## ResultV1
 
@@ -207,6 +261,7 @@ Codigos conhecidos:
 | `ERROR_101_FPS_INVALID` | FPS invalido ou zero. |
 | `ERROR_102_VIDEO_DURATION` | Duracao invalida ou zero. |
 | `ERROR_VIDEO_INVALID` | Video falhou nos requisitos basicos. |
+| `ERROR_PIPELINE_FAILED` | Falha inesperada durante processamento local ou remoto. |
 
 ### input_summary
 

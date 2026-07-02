@@ -31,18 +31,23 @@ class Settings:
     upload_dir: Path
     results_dir: Path
     temp_dir: Path
+    jobs_dir: Path
     window_l: int
     cors_origins: list[str]
     use_mock_engine: bool
     engine_mode: str
     remote_engine_url: str | None
     remote_engine_timeout_s: int
+    max_upload_bytes: int
+    worker_token: str | None
+    worker_claim_ttl_s: int
 
 
 @lru_cache
 def get_settings() -> Settings:
     use_mock_engine = _parse_bool(os.getenv("USE_MOCK_ENGINE", "false"))
     engine_mode = os.getenv("ENGINE_MODE", "mock" if use_mock_engine else "local")
+    max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
     return Settings(
         app_env=os.getenv("APP_ENV", "development"),
@@ -51,12 +56,16 @@ def get_settings() -> Settings:
         upload_dir=_resolve_path(os.getenv("UPLOAD_DIR", "storage/uploads")),
         results_dir=_resolve_path(os.getenv("RESULTS_DIR", "storage/results")),
         temp_dir=_resolve_path(os.getenv("TEMP_DIR", "storage/temp")),
+        jobs_dir=_resolve_path(os.getenv("JOBS_DIR", "storage/jobs")),
         window_l=int(os.getenv("WINDOW_L", "150")),
         cors_origins=_parse_cors_origins(os.getenv("CORS_ORIGINS", "*")),
         use_mock_engine=use_mock_engine,
         engine_mode=engine_mode,
         remote_engine_url=os.getenv("REMOTE_ENGINE_URL"),
         remote_engine_timeout_s=int(os.getenv("REMOTE_ENGINE_TIMEOUT_S", "3600")),
+        max_upload_bytes=max_upload_mb * 1024 * 1024,
+        worker_token=os.getenv("WORKER_TOKEN"),
+        worker_claim_ttl_s=int(os.getenv("WORKER_CLAIM_TTL_S", "900")),
     )
 
 
@@ -65,3 +74,4 @@ def ensure_storage_dirs() -> None:
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.results_dir.mkdir(parents=True, exist_ok=True)
     settings.temp_dir.mkdir(parents=True, exist_ok=True)
+    settings.jobs_dir.mkdir(parents=True, exist_ok=True)

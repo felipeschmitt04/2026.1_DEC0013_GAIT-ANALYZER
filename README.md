@@ -31,7 +31,7 @@ engine_dgx/
 └── main.py                 # Worker FastAPI para a DGX
 
 frontend-demo/
-└── index.html              # Demo Three.js para inspecionar ResultV1
+└── index.html              # Validador Three.js para ResultV1/model3d
 
 docs/
 ├── backend/                # Documentação desta entrega/backend
@@ -75,6 +75,7 @@ Endpoints principais:
 
 - `GET /health`
 - `POST /analyze`
+- `GET /jobs`
 - `GET /status/{job_id}`
 - `GET /results/{job_id}`
 - `GET /results/{job_id}/artifacts/{filename}`
@@ -82,7 +83,15 @@ Endpoints principais:
 O contrato completo está em
 [Contrato da API](docs/backend/pt-br/10-api.md).
 
+## CI/CD Em Termos Simples
+
+CI significa integracao continua: o GitHub roda automaticamente checagens quando ha push ou pull request. Neste repositorio, a CI instala as dependencias leves do backend, compila os modulos Python e executa os testes.
+
+CD significa entrega/deploy continuo. Este projeto ainda nao faz deploy automatico; atualizar Azure ou DGX continua sendo um passo manual documentado.
+
 ## Documentação
+
+O `frontend-demo/` e somente um validador local do `ResultV1` e do `data.model3d`. O frontend final e mantido em outro ambiente pelo responsavel da parte web.
 
 A documentação está separada por área do projeto:
 
@@ -141,3 +150,6 @@ mantida pelo responsável dessa parte.
 
 15. [Testes](docs/backend/pt-br/15-testes.md)
     Tipos de teste e comandos de validação do projeto.
+
+16. [Decisoes de Inferencia DGX](docs/backend/pt-br/16-decisoes-inferencia-dgx.md)
+    Decisoes aprovadas sobre fila, DGX pull-based, cache JAX/Equinox e banco.
