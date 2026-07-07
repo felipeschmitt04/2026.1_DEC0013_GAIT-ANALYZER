@@ -157,6 +157,17 @@ def _job_summary_from_result(job_id: str, payload: dict) -> dict:
     }
 
 
+def _read_result_summary_from_path(job_id: str, result_path: Path | None) -> dict | None:
+    if result_path is None or not result_path.exists():
+        return None
+
+    try:
+        return _job_summary_from_result(job_id, _read_json(result_path))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Ignorando resultado invalido do job %s: %s", job_id, exc)
+        return None
+
+
 def _collect_job_summaries() -> list[dict]:
     settings = get_settings()
     jobs_by_id = {}
@@ -190,6 +201,10 @@ def _collect_job_summaries() -> list[dict]:
     if hasattr(settings, "jobs_dir"):
         for job in list_queued_jobs():
             job_id = job["job_id"]
+            result_path = Path(job["result_path"]) if job.get("result_path") else None
+            result_summary = jobs_by_id.get(job_id) or _read_result_summary_from_path(job_id, result_path) or {}
+            artifacts = result_summary.get("artifacts") or {}
+            artifacts.update(job.get("artifacts") or {})
             jobs_by_id[job_id] = {
                 "job_id": job_id,
                 "job": job,
@@ -197,9 +212,9 @@ def _collect_job_summaries() -> list[dict]:
                 "stage": job.get("stage"),
                 "created_at": job.get("created_at"),
                 "finished_at": job.get("finished_at"),
-                "has_result": bool(job.get("result_path")),
-                "has_model3d": False,
-                "artifacts": job.get("artifacts") or {},
+                "has_result": bool(job.get("result_path")) or bool(result_summary.get("has_result")),
+                "has_model3d": bool(result_summary.get("has_model3d")),
+                "artifacts": artifacts,
             }
 
     return sorted(

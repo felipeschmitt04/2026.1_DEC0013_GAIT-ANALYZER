@@ -10,7 +10,7 @@ from app.schemas.job import JobInfo
 from app.schemas.result import BiomechanicalData, ResultV1
 
 
-def build_result(job_id: str) -> ResultV1:
+def build_result(job_id: str, model3d: dict | None = None) -> ResultV1:
     now = datetime.now(timezone.utc)
     pose3d = [[[0.0, 0.0, 0.0] for _ in range(17)]]
     return ResultV1(
@@ -43,6 +43,7 @@ def build_result(job_id: str) -> ResultV1:
             pose3d=pose3d,
             skeleton={"joint_count": 17},
             fitting={"coordinate_names": [f"q{i}" for i in range(40)], "angles": [[0.0] * 40]},
+            model3d=model3d,
             metricas_clinicas={},
         ),
     )
@@ -148,3 +149,38 @@ def test_list_jobs_returns_saved_and_processing_jobs(monkeypatch, tmp_path):
     assert jobs[completed_job]["has_result"] is True
     assert jobs[processing_job]["status"] == "processing"
     assert jobs[processing_job]["has_result"] is False
+
+
+def test_list_jobs_marks_model3d_for_completed_queued_job(monkeypatch, tmp_path):
+    client, settings = client_with_temp_storage(monkeypatch, tmp_path)
+    completed_job = "completed-queued-job"
+    result_path = settings.results_dir / completed_job / "result.json"
+    model3d = {"frames": [{"time_s": 0.0}], "geoms": [{"name": "pelvis"}]}
+    analysis_route._write_json(result_path, build_result(completed_job, model3d=model3d))
+
+    monkeypatch.setattr(
+        analysis_route,
+        "list_queued_jobs",
+        lambda: [
+            {
+                "job_id": completed_job,
+                "status": "completed",
+                "stage": "finished",
+                "created_at": "2026-07-07T00:02:06+00:00",
+                "finished_at": "2026-07-07T00:08:18+00:00",
+                "result_path": str(result_path),
+                "artifacts": {"movement_npz": f"/results/{completed_job}/artifacts/movimento_exportado.npz"},
+            }
+        ],
+    )
+
+    response = client.get("/jobs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    job = payload["jobs"][0]
+    assert job["job_id"] == completed_job
+    assert job["has_result"] is True
+    assert job["has_model3d"] is True
+    assert job["artifacts"]["movement_npz"] == f"/results/{completed_job}/artifacts/movimento_exportado.npz"
