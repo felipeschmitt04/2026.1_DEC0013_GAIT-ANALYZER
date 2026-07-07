@@ -10,6 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
+from app.schemas.error import ErrorInfo
 from app.schemas.input import InputSummary, QualityInfo
 from app.schemas.job import JobInfo
 from app.schemas.result import ResultV1
@@ -118,6 +119,28 @@ def _build_queued_result(job_id: str, upload_path: Path, height_mm: int, window_
     )
 
 
+def _build_failed_ingest_result(job_id: str, error_code: str) -> ResultV1:
+    now = datetime.now(timezone.utc)
+    return ResultV1(
+        result_version="1.0",
+        job=JobInfo(
+            job_id=job_id,
+            status="failed",
+            stage="ingest",
+            created_at=now,
+            started_at=now,
+            finished_at=now,
+            duration_ms=0,
+        ),
+        error=ErrorInfo(
+            code=error_code,
+            message="O vídeo falhou na validação inicial do OpenCV",
+            stage="ingest",
+            retryable=False,
+        ),
+    )
+
+
 def _store_generated_artifacts(result_dir: Path, job_id: str, source_artifacts: dict | None = None) -> dict:
     artifacts = {}
 
@@ -128,7 +151,6 @@ def _store_generated_artifacts(result_dir: Path, job_id: str, source_artifacts: 
         candidates = []
         if source_artifacts and source_artifacts.get(key):
             candidates.append(Path(source_artifacts[key]))
-        candidates.append(Path.cwd() / filename)
 
         source = next((candidate for candidate in candidates if candidate.exists()), None)
         if source is not None:
@@ -250,13 +272,19 @@ async def analyze_video(
     logger.info("Video salvo para job %s (%s bytes). Iniciando analise", job_id, stored_bytes)
 
     if getattr(settings, "engine_mode", "local").lower() == "queue":
-        result = _build_queued_result(
-            job_id=job_id,
-            upload_path=upload_path,
-            height_mm=height_mm,
-            window_l=settings.window_l,
-            rotated=rotated,
-        )
+        try:
+            result = _build_queued_result(
+                job_id=job_id,
+                upload_path=upload_path,
+                height_mm=height_mm,
+                window_l=settings.window_l,
+                rotated=rotated,
+            )
+        except ValueError as exc:
+            result = _build_failed_ingest_result(job_id=job_id, error_code=str(exc))
+            _write_json(result_path, result)
+            return result
+
         create_job(
             job_id=job_id,
             upload_path=upload_path,
@@ -275,6 +303,7 @@ async def analyze_video(
         window_L=settings.window_l,
         job_id=job_id,
         rotated=rotated,
+        output_dir=result_dir,
     )
 
     source_artifacts = result.data.artifacts if result.data is not None else None
@@ -316,7 +345,7 @@ async def get_status(job_id: str):
     if upload_path.exists():
         return {"job_id": job_id, "status": "processing", "stage": "unknown"}
 
-    raise HTTPException(status_code=404, detail="Job n?o encontrado")
+    raise HTTPException(status_code=404, detail="Job nao encontrado")
 
 
 @router.get("/results/{job_id}")

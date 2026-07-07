@@ -23,6 +23,14 @@ def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_production(app_env: str) -> bool:
+    return app_env.strip().lower() in {"prod", "production"}
+
+
+def _is_unsafe_token(value: str | None) -> bool:
+    return value is None or value.strip() in {"", "change-me"}
+
+
 @dataclass(frozen=True)
 class Settings:
     app_env: str
@@ -64,9 +72,21 @@ def get_settings() -> Settings:
         remote_engine_url=os.getenv("REMOTE_ENGINE_URL"),
         remote_engine_timeout_s=int(os.getenv("REMOTE_ENGINE_TIMEOUT_S", "3600")),
         max_upload_bytes=max_upload_mb * 1024 * 1024,
-        worker_token=os.getenv("WORKER_TOKEN"),
+        worker_token=os.getenv("WORKER_TOKEN") or None,
         worker_claim_ttl_s=int(os.getenv("WORKER_CLAIM_TTL_S", "900")),
     )
+
+
+def validate_runtime_settings(settings: Settings | None = None) -> None:
+    settings = settings or get_settings()
+    if not _is_production(settings.app_env):
+        return
+
+    if "*" in settings.cors_origins:
+        raise RuntimeError("CORS_ORIGINS nao pode conter * quando APP_ENV=production")
+
+    if _is_unsafe_token(settings.worker_token):
+        raise RuntimeError("WORKER_TOKEN forte e obrigatorio quando APP_ENV=production")
 
 
 def ensure_storage_dirs() -> None:

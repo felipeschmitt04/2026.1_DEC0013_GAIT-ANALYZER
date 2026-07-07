@@ -38,6 +38,8 @@ logs/
 
 # Notebooks and exploratory files
 *.ipynb
+handoff_frontend_resultado/
+relatorio_doc/
 
 # Generated media and ML artifacts
 *.mp4

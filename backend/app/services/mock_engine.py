@@ -9,7 +9,7 @@ class MockGaitAnalysisEngine:
     def __init__(self, window_L: int = 150):
         self.window_L = window_L
 
-    def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
         frame_count = 30
         pose3d = []
 

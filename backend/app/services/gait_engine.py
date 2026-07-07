@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import logging
 import tensorflow_hub as hub
+from pathlib import Path
 from app.ml.fitting import fit_model
 
 logger = logging.getLogger("Engine")
@@ -93,7 +94,7 @@ class GaitAnalysisEngine:
 
         return ang, dataset[0]
 
-    def process_video(_self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(_self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
         logger.info("Começando processamento real do vídeo")
 
         vid, n_frames = video_reader(video_path)
@@ -136,18 +137,20 @@ class GaitAnalysisEngine:
 
         angulos_3d, timestamps_jax = _self.calculate_kinematics(pose3d_ordenado)
 
-        # Renderiza o vídeo final
-        exit_file = '3d_rebuild.mp4'
-        #render_trajectory(angulos_3d, exit_file, xml_path=None)
-        np.savez('movimento_exportado.npz', angulos=angulos_3d, timestamps=timestamps_jax)
+        artifact_dir = Path(output_dir) if output_dir is not None else Path(video_path).parent
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        movement_npz = artifact_dir / 'movimento_exportado.npz'
+        np.savez(movement_npz, angulos=angulos_3d, timestamps=timestamps_jax)
 
         return {
             "status": "sucesso",
-            "video_3d": exit_file,
             "pose3d": keypoints.tolist(),
             "events": state.tolist(),
             "kinematics": {
                 "angles": angulos_3d.tolist(),
                 "timestamps": timestamps_jax.tolist()
-            }
+            },
+            "artifacts": {
+                "movement_npz": str(movement_npz),
+            },
         }

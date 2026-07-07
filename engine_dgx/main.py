@@ -85,6 +85,7 @@ def process_job_file(current_job_id: str, upload_path: Path, height_mm: int, rot
                 video_path=str(upload_path),
                 height_mm=height_mm,
                 rotated=rotated,
+                output_dir=result_dir,
             )
         except Exception:
             logger.exception("Falha no processamento do job %s", current_job_id)

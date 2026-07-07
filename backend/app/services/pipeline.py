@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from app.core.engine import get_engine
@@ -15,7 +16,15 @@ from app.services.video_metadata import get_metadata
 logger = logging.getLogger("Pipeline")
 
 
-def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rotated: bool = False):
+def run_pipeline(
+    video_path,
+    height_mm,
+    window_L,
+    engine=None,
+    job_id=None,
+    rotated: bool = False,
+    output_dir: str | Path | None = None,
+):
     logger.info("Iniciando pipeline")
     logger.debug("Criando job")
 
@@ -75,13 +84,15 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
             if engine is None:
                 engine = get_engine()
 
-            raw_data = (
-                engine.process_video(  # Aqui chama a função que vai processar o vídeo
-                    video_path=video_path,
-                    height_mm=height_mm,
-                    rotated=rotated,
-                )
-            )
+            process_kwargs = {
+                "video_path": video_path,
+                "height_mm": height_mm,
+                "rotated": rotated,
+            }
+            if output_dir is not None:
+                process_kwargs["output_dir"] = output_dir
+
+            raw_data = engine.process_video(**process_kwargs)
 
             logger.info("Vídeo processado com sucesso")
 

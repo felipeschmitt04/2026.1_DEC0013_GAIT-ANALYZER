@@ -19,7 +19,7 @@ class RemoteDgxEngine:
         self.base_url = base_url.rstrip("/")
         self.timeout_s = timeout_s
 
-    def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
         path = Path(video_path)
         logger.info("Enviando video para DGX worker: %s", self.base_url)
 
@@ -43,7 +43,7 @@ class RemoteDgxEngine:
             raw_data = payload["raw_data"]
             raw_data["artifacts"] = self._download_artifacts(
                 payload.get("artifacts", {}),
-                target_dir=path.parent,
+                target_dir=Path(output_dir) if output_dir is not None else path.parent,
             )
             return raw_data
 

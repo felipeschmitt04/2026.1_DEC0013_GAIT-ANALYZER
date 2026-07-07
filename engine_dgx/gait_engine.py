@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
@@ -78,7 +79,7 @@ class GaitAnalysisEngine:
 
         return ang, dataset[0], model3d
 
-    def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
         logger.info("Processando video real: %s", video_path)
 
         vid, n_frames = video_reader(video_path)
@@ -173,11 +174,13 @@ class GaitAnalysisEngine:
 
         angles_3d, timestamps_jax, model3d = self.calculate_kinematics(pose3d_fitting)
 
-        np.savez("movimento_exportado.npz", angulos=angles_3d, timestamps=timestamps_jax)
+        artifact_dir = Path(output_dir) if output_dir is not None else Path(video_path).parent
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        movement_npz = artifact_dir / "movimento_exportado.npz"
+        np.savez(movement_npz, angulos=angles_3d, timestamps=timestamps_jax)
 
         return {
             "status": "sucesso",
-            "video_3d": None,
             "pose3d": keypoints.tolist(),
             "events": state.tolist(),
             "kinematics": {
@@ -186,4 +189,7 @@ class GaitAnalysisEngine:
             },
             "model3d": model3d,
             "diagnostics": diagnostics,
+            "artifacts": {
+                "movement_npz": str(movement_npz),
+            },
         }
