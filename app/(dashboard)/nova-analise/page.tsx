@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProtecaoPaciente } from "@/components/ProtecaoPaciente";
 import { usePaciente } from "@/app/PacienteContext";
-import { UploadCloud, FileVideo, X, CheckCircle2, Tag, Smartphone, Monitor } from "lucide-react";
+import { UploadCloud, FileVideo, X, CheckCircle2, Tag, Smartphone, Monitor, Ruler } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ export default function NovaAnalisePage() {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [nomeAnalise, setNomeAnalise] = useState("");
+  const [alturaCm, setAlturaCm] = useState(""); // Novo campo de altura em cm
   const [enviando, setEnviando] = useState(false);
   
   const [orientacao, setOrientacao] = useState<"em-pe" | "deitado">("em-pe");
@@ -68,27 +69,43 @@ export default function NovaAnalisePage() {
   };
 
   const handleAnalisar = async () => {
-    if (!file || !nomeAnalise || !pacienteAtivo?.id) return;
+    // Valida se todos os parâmetros obrigatórios foram preenchidos
+    if (!file || !nomeAnalise || !alturaCm || !pacienteAtivo?.id) {
+      alert("Por favor, preencha todos os campos antes de continuar.");
+      return;
+    }
     
     try {
       setEnviando(true);
 
+      // Converte a altura de centímetros para milímetros (Ex: 175cm -> 1750mm)
+      const heightMm = Math.round(parseFloat(alturaCm) * 10);
+      
+      // Define a rotação com base na orientação selecionada
+      const rotated = orientacao === "deitado";
+
+      // Cria o FormData necessário para upload de arquivos na API do backend
+      const formData = new FormData();
+      formData.append("video", file); // Arquivo de vídeo real
+      formData.append("height_mm", String(heightMm)); // Altura em mm exigida pelo backend
+      formData.append("rotated", String(rotated)); // Envia a flag de rotação
+      formData.append("nome", nomeAnalise);
+      formData.append("pacienteId", pacienteAtivo.id);
+
+      // Dispara a requisição para a sua rota interna da API Next.js
       const resAnalise = await fetch("/api/analises", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: nomeAnalise,
-          pacienteId: pacienteAtivo.id,
-          videoName: file.name,
-          orientacao: orientacao 
-        }),
+        body: formData, // Envia o formData completo ao invés do JSON string
       });
 
       if (resAnalise.ok) {
+        const dadosJob = await resAnalise.json();
         setAnaliseAtiva(nomeAnalise); 
-        router.push("/visualizacao");
+        
+        // Redireciona para a tela de visualização passando o id do processamento (job_id)
+        router.push(`/visualizacao?jobId=${dadosJob.job_id || ""}`);
       } else {
-        alert("Erro ao salvar a análise no servidor.");
+        alert("Erro ao salvar e iniciar a análise no servidor.");
       }
     } catch (error: any) {
       console.error(error);
@@ -113,7 +130,7 @@ export default function NovaAnalisePage() {
         {/* ÁREA DE UPLOAD */}
         <div
           className={cn(
-            "relative w-full h-[450px] border-2 border-dashed rounded-3xl transition-all flex flex-col items-center justify-center gap-4 cursor-pointer",
+            "relative w-full h-[400px] border-2 border-dashed rounded-3xl transition-all flex flex-col items-center justify-center gap-4 cursor-pointer",
             dragActive 
               ? "border-emerald-500 bg-emerald-50/50" 
               : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300",
@@ -178,9 +195,9 @@ export default function NovaAnalisePage() {
           )}
         </div>
 
-        {/* RODAPÉ: INPUT, SELETOR DE ORIENTAÇÃO E BOTÃO DE ENVIO */}
-        <div className="mt-8 flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm">
-          <div className="relative flex-1 group">
+        {/* CAMPOS ADICIONAIS: NOME E ALTURA */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative group md:col-span-2">
             <Tag className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
             <Input 
               placeholder="Dê um nome para esta análise (ex: Caminhada Pós-Cirúrgica 01)"
@@ -191,6 +208,21 @@ export default function NovaAnalisePage() {
             />
           </div>
 
+          <div className="relative group">
+            <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+            <Input 
+              type="number"
+              placeholder="Altura do paciente (cm)"
+              value={alturaCm}
+              onChange={(e) => setAlturaCm(e.target.value)}
+              disabled={enviando}
+              className="h-14 pl-12 rounded-xl border-slate-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+            />
+          </div>
+        </div>
+
+        {/* RODAPÉ: SELETOR DE ORIENTAÇÃO E BOTÃO DE ENVIO */}
+        <div className="mt-4 flex items-center justify-end gap-4 bg-white p-2 rounded-2xl shadow-sm">
           <Button
             type="button"
             variant="outline"
@@ -218,7 +250,7 @@ export default function NovaAnalisePage() {
           </Button>
 
           <Button
-            disabled={!file || !nomeAnalise || enviando}
+            disabled={!file || !nomeAnalise || !alturaCm || enviando}
             onClick={handleAnalisar}
             className="h-14 px-10 rounded-xl text-lg font-bold bg-slate-900 hover:bg-slate-800 shadow-xl disabled:opacity-50 disabled:bg-slate-300 transition-all active:scale-95 text-white flex items-center gap-2"
           >

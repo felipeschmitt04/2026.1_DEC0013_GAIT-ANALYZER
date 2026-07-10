@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 // manda a raiz para o login
 const nextConfig: NextConfig = {
+  output: 'standalone',
   async redirects() {
     return [
       {

@@ -9,13 +9,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Analise {
-  id: string;
+  id: string; // Este id deve corresponder ao job_id gerado pelo backend
   nome: string;
   data: string; 
 }
 
 export default function RelatoriosPage() {
-
   const { pacienteAtivo, setAnaliseAtiva } = usePaciente();
   const router = useRouter();
 
@@ -23,9 +22,7 @@ export default function RelatoriosPage() {
   const [selecionadaLocal, setSelecionadaLocal] = useState<Analise | null>(null);
   const [loading, setLoading] = useState(true);
 
-
   useEffect(() => {
-  
     if (!pacienteAtivo?.id) return;
 
     const carregarHistorico = async () => {
@@ -63,8 +60,12 @@ export default function RelatoriosPage() {
 
   const handleVerNoMapa3D = () => {
     if (!selecionadaLocal) return;
+    
+    // Define o nome da análise ativa no contexto global
     setAnaliseAtiva(selecionadaLocal.nome);
-    router.push("/visualizacao");
+    
+    // Encaminha para a rota de visualização injetando o id correto na URL para o Three.js buscar os dados
+    router.push(`/visualizacao?jobId=${selecionadaLocal.id}`);
   };
 
   const handleGerarPDF = () => {
@@ -80,7 +81,6 @@ export default function RelatoriosPage() {
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Relatórios</h1>
           <p className="text-slate-500">
-            {/* 🌟 CORRIGIDO: Exibe apenas o texto do nome do objeto do paciente ativo */}
             Escolha qual análise de <span className="font-bold text-emerald-600">{pacienteAtivo?.nome}</span> deseja visualizar ou exportar.
           </p>
         </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Suspense } from "react";
 
 interface SegmentoCorporal {
   id: string;
@@ -29,11 +30,17 @@ const segmentos: SegmentoCorporal[] = [
   },
 ];
 
-export default function FocoAnalisePage() {
+// Criamos um subcomponente para encapsular o uso de hooks de busca (exigência do Next.js)
+function FocoAnaliseContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Resgata o jobId vindo da tela de upload ou do histórico de relatórios
+  const jobId = searchParams.get("jobId") || "";
 
   const handleSelecionar = (segmentoId: string) => {
-    router.push(`/visualizacao/3d?segmento=${segmentoId}`);
+    // Redireciona repassando o segmento focado E o identificador único do teste para a Azure/Three.js
+    router.push(`/visualizacao/3d?jobId=${jobId}&segmento=${segmentoId}`);
   };
 
   return (
@@ -76,5 +83,14 @@ export default function FocoAnalisePage() {
         ))}
       </div>
     </div>
+  );
+}
+
+// Exportação padrão envolvendo a página com Suspense para evitar falhas no build do Next.js
+export default function FocoAnalisePage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-slate-500">Carregando opções...</div>}>
+      <FocoAnaliseContent />
+    </Suspense>
   );
 }
