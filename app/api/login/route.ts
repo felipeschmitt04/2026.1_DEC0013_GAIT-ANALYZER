@@ -1,23 +1,34 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-const ADMIN_EMAIL = "admin@teste.com";// admin é fixo
+const ADMIN_EMAIL = "admin@teste.com";
 const ADMIN_SENHA = "admin123";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, loginType } = await request.json();
 
-    if (!email || !password) {// analisa se tem email e senha, 
+    // 1. VALIDAÇÃO DE CAMPOS OBRIGATÓRIOS
+    if (!email || !password) {
       return NextResponse.json(
         { message: "E-mail e senha são obrigatórios." },
         { status: 400 }
       );
     }
 
-    const emailTratado = email.toLowerCase().trim();// torna minúsculo e tira espaços
-    // testa email e senha
+    const emailTratado = email.toLowerCase().trim();
+
+    // 2. FLUXO DO ADMINISTRADOR (FIXO)
     if (emailTratado === ADMIN_EMAIL) {
+      // Se tentar logar como admin fora da página de admin, exibe erro padrão
+      if (loginType !== "admin") {
+        return NextResponse.json(
+          { message: "E-mail ou senha incorretos." },
+          { status: 401 }
+        );
+      }
+
+      // Valida a senha do administrador
       if (password === ADMIN_SENHA) {
         const response = NextResponse.json({
           success: true,
@@ -25,47 +36,61 @@ export async function POST(request: Request) {
           nome: "Administrador Geral",
         });
 
-        response.cookies.set("user-role", "admin", {//cria cookie user-role com valor admin
-          path: "/",// pra todo o site
-          maxAge: 60 * 60 * 24, // dura 1 dia, aí pode entrar sem logar de novo
-          httpOnly: false,//libera o acesso ao cookie
-          secure: process.env.NODE_ENV === "production",// se tiver na internet/servidor ,vira production e só envia o cookie se for https
-          sameSite: "lax",// protege o cookie de ataques, verifica daonde veio o clique se não veio de terceiros(outro site aberto em outra guia por exemplo)
+        // Configura o cookie de nível de acesso
+        response.cookies.set("user-role", "admin", {
+          path: "/",
+          maxAge: 60 * 60 * 24, // 1 dia
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
         });
 
-        response.cookies.set("user-id", "", {// apaga o cookie user-id que poderia ter de um profissional
-          path: "/",//admin não tem id
+        // Garante a limpeza de qualquer ID de profissional anterior
+        response.cookies.set("user-id", "", { 
+          path: "/",
           maxAge: 0,
         });
 
-        return response;// entra como admin
+        return response;
       } else {
+        // Erro genérico mesmo se errar apenas a senha do admin
         return NextResponse.json(
-          { message: "Senha administrativa incorreta." },
+          { message: "E-mail ou senha incorretos." },
           { status: 401 }
         );
       }
     }
 
-    const profissional = await db.profissional.findUnique({// prisma procurando no banco de dados o email
-      where: { email: emailTratado },
-    });
-
-    //  Bloqueia se o profissional não existir, se a senha estiver errada ou se estiver inativo
-    if (!profissional || profissional.senha !== password || !profissional.ativo) {
+    // 3. FLUXO DO PROFISSIONAL (BANCO DE DADOS)
+    // Se um usuário comum tentar usar a rota na página do Admin, barra direto
+    if (loginType === "admin") {
       return NextResponse.json(
         { message: "E-mail ou senha incorretos." },
         { status: 401 }
       );
     }
 
-    const response = NextResponse.json({// manda o cargo e o nome do profissional
-      success: true,
-      role: profissional.role,
-      nome: profissional.nome,
+    // Busca o profissional no banco de dados via Prisma
+    const profisional = await db.profissional.findUnique({
+      where: { email: emailTratado },
     });
-    //mesma coisa do cookie do admin, mas com o cargo do profissional
-    response.cookies.set("user-role", profissional.role, {
+
+    // Bloqueia se não existir, se a senha estiver errada ou se estiver inativo
+    if (!profisional || profisional.senha !== password || !profisional.ativo) {
+      return NextResponse.json(
+        { message: "E-mail ou senha incorretos." },
+        { status: 401 }
+      );
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      role: profisional.role,
+      nome: profisional.nome,
+    });
+    
+    // Configura o cookie com a role do profissional
+    response.cookies.set("user-role", profisional.role, {
       path: "/",
       maxAge: 60 * 60 * 24,
       httpOnly: false,
@@ -73,8 +98,8 @@ export async function POST(request: Request) {
       sameSite: "lax",
     });
 
-    // cria o cookie de id
-    response.cookies.set("user-id", profissional.id, {
+    // Configura o cookie com o ID único do profissional
+    response.cookies.set("user-id", profisional.id, {
       path: "/",
       maxAge: 60 * 60 * 24,
       httpOnly: false,

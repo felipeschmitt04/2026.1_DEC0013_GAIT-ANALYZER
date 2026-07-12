@@ -54,7 +54,8 @@ function getCookie(nome: string): string | null {
 }
 
 export default function PacientesPage() {
-  const { setPacienteAtivo } = usePaciente()
+  //  Importamos as funções de reset da análise ativa e do job id ativo do seu contexto
+  const { pacienteAtivo, setPacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente()
 
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [pacienteSelecionado, setPacienteSelecionado] = useState<Paciente | null>(null)
@@ -152,6 +153,10 @@ export default function PacientesPage() {
   }
 
   const handleSelectPatientAction = (paciente: Paciente) => {
+    //  Reseta explicitamente a análise e o ID antes de injetar o novo paciente
+    setAnaliseAtiva(null)
+    setJobIdAtivo(null)
+
     setPacienteAtivo({
       id: paciente.id,
       nome: paciente.nome
@@ -271,6 +276,13 @@ export default function PacientesPage() {
 
       if (!response.ok) throw new Error("Erro ao desativar.");
 
+      //  VALIDAÇÃO ADICIONADA: Se o paciente excluído for o paciente ativo atual, reseta tudo
+      if (pacienteAtivo?.id === id) {
+        setPacienteAtivo(null)
+        setAnaliseAtiva(null)
+        setJobIdAtivo(null)
+      }
+
       alert("Paciente desativado com sucesso!")
       setPacienteSelecionado(null)
       carregarPacientes()
@@ -333,13 +345,13 @@ export default function PacientesPage() {
             ))
           ) : (
             <div className="col-span-full py-20 text-center text-slate-400">
-              Nenhum paciente encontrado no banco.
+              Nenum paciente encontrado no banco.
             </div>
           )}
         </div>
       )}
 
-          {totalPaginas > 1 && (
+      {totalPaginas > 1 && (
         <div style={{ marginTop: '32px' }}>
           <Pagination>
             <PaginationContent>
@@ -357,7 +369,6 @@ export default function PacientesPage() {
                     href="#" 
                     isActive={paginaAtual === i}
                     onClick={(e) => { e.preventDefault(); setPaginaAtual(i); }}
-                    // Aqui está o ajuste: botão ativo fica preto, inativos mantêm o padrão
                     className={paginaAtual === i 
                       ? "bg-black hover:bg-zinc-800 text-white" 
                       : "cursor-pointer"}

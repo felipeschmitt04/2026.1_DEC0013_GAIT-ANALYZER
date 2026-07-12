@@ -41,20 +41,23 @@ interface DadosAnalise {
 }
 
 function ConteudoVisualizacao() {
-  const { pacienteAtivo, analiseAtiva } = usePaciente();
+  //  Extraímos o jobIdAtivo nativo do nosso Contexto persistente
+  const { pacienteAtivo, analiseAtiva, jobIdAtivo } = usePaciente();
   const [metricas, setMetricas] = useState<DadosAnalise | null>(null);
   const [jsonBiomecanico, setJsonBiomecanico] = useState<any | null>(null);
   const [statusJob, setStatusJob] = useState<string>("loading");
   const [erroMensagem, setErroMensagem] = useState<string | null>(null);
 
-  // 🌟 ESTADOS PARA O CONTROLADOR DE REPRODUÇÃO (TIMELINE)
+  //  ESTADOS PARA O CONTROLADOR DE REPRODUÇÃO (TIMELINE)
   const [frameAtual, setFrameAtual] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
 
   const searchParams = useSearchParams();
   const segmentoId = searchParams.get("segmento");
-  const jobId = searchParams.get("jobId") || "";
   const router = useRouter(); 
+  
+  //  SELEÇÃO INTELIGENTE: Se houver ID na URL, prioriza ele. Caso retorne à página sem parâmetros, puxa do Contexto!
+  const jobId = searchParams.get("jobId") || jobIdAtivo || "";
   
   const container3dRef = useRef<HTMLDivElement>(null);
 
@@ -132,7 +135,7 @@ function ConteudoVisualizacao() {
     };
   }, [jobId]);
 
-  // 🌟 CRONÔMETRO DE SINCRONIZAÇÃO DA TIMELINE (Controlado pelo React)
+  // CRONÔMETRO DE SINCRONIZAÇÃO DA TIMELINE (Controlado pelo React)
   useEffect(() => {
     if (!jsonBiomecanico || !isPlaying) return;
 
@@ -385,7 +388,6 @@ function ConteudoVisualizacao() {
                   <p className="font-mono text-xs tracking-widest">AGUARDANDO COORDENADAS 3D...</p>
                 </div>
               ) : (
-                // 🌟 PASSAMOS O 'frameAtual' COMO PROP AGORA!
                 <ModelosCanvas segmentoId={segmentoId} dadosBiomecanicos={jsonBiomecanico} frameAtual={frameAtual} />
               )}
             </div>
@@ -402,7 +404,7 @@ function ConteudoVisualizacao() {
             </div>
           </div>
 
-          {/* 🌟 LAYOUT DA TIMELINE PLAYER (SÓ APARECE QUANDO CARREGAR O JSON) */}
+          {/* LAYOUT DA TIMELINE PLAYER */}
           {!estaAguardando && jsonBiomecanico && (
             <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col gap-3 shadow-xl text-slate-300">
               <div className="flex items-center gap-4">
@@ -441,7 +443,7 @@ function ConteudoVisualizacao() {
                   max={totalFramesDisponiveis - 1} 
                   value={frameAtual} 
                   onChange={(e) => {
-                    setIsPlaying(false); // Pausa o play automático ao interagir manualmente
+                    setIsPlaying(false); 
                     setFrameAtual(Number(e.target.value));
                   }}
                   className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 outline-none"

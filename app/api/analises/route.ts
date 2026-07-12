@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-// 🌟 COLOQUE AQUI A URL QUE SEU AMIGO PASSOU DA AZURE
 const API_BASE_URL = "https://52-247-110-87.sslip.io";
 
 export async function POST(request: Request) {

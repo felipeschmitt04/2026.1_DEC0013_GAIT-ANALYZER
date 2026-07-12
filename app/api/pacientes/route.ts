@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         nome,
         dataNascimento, 
         cpf: cpfFinal,              
-        profissionalId: idDoProfissionalFinal, // 🌟 Salva com o ID que realmente existe no banco
+        profissionalId: idDoProfissionalFinal, // Salva com o ID que realmente existe no banco
         ativo: true, 
         genero: genero || null,
         peso: pesoFormatado,

@@ -15,7 +15,8 @@ interface Analise {
 }
 
 export default function RelatoriosPage() {
-  const { pacienteAtivo, setAnaliseAtiva } = usePaciente();
+  //  Importamos o setJobIdAtivo direto do seu hook original usePaciente
+  const { pacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente();
   const router = useRouter();
 
   const [analises, setAnalises] = useState<Analise[]>([]);
@@ -63,6 +64,9 @@ export default function RelatoriosPage() {
     
     // Define o nome da análise ativa no contexto global
     setAnaliseAtiva(selecionadaLocal.nome);
+    
+    //  SALVA O ID NO CONTEXTO: Garante a persistência estável na memória do app ao mudar de rota
+    setJobIdAtivo(selecionadaLocal.id);
     
     // Encaminha para a rota de visualização injetando o id correto na URL para o Three.js buscar os dados
     router.push(`/visualizacao?jobId=${selecionadaLocal.id}`);

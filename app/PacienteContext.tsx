@@ -6,19 +6,24 @@ interface PacienteAtivo {
   id: string
   nome: string
 }
+
 // quais dados e funções podem usar
 interface PacienteContextType {
   pacienteAtivo: PacienteAtivo | null
   setPacienteAtivo: (paciente: PacienteAtivo | null) => void
   analiseAtiva: string | null            
   setAnaliseAtiva: (nome: string | null) => void 
+  jobIdAtivo: string | null            //  Adicionado: ID definitivo da análise ativa
+  setJobIdAtivo: (id: string | null) => void //  Adicionado: Função para guardar o ID
 }
+
 // cria os dados que vão ser compartilhados, começa vazia
 const PacienteContext = createContext<PacienteContextType | undefined>(undefined)
 
 export function PacienteProvider({ children }: { children: ReactNode }) {
   const [pacienteAtivo, setPacienteAtivoState] = useState<PacienteAtivo | null>(null)
   const [analiseAtiva, setAnaliseAtiva] = useState<string | null>(null)
+  const [jobIdAtivo, setJobIdAtivo] = useState<string | null>(null) //  Estado para o ID da análise
 
   // reseta a análise ativa sempre que o paciente muda (ou é deslogado/null).
   const setPacienteAtivo = (paciente: PacienteAtivo | null) => {
@@ -26,6 +31,7 @@ export function PacienteProvider({ children }: { children: ReactNode }) {
       // Só reseta a análise se o paciente realmente mudou (id diferente)
       if (pacienteAnterior?.id !== paciente?.id) {
         setAnaliseAtiva(null)
+        setJobIdAtivo(null) // Reseta o ID também se mudar de paciente
       }
       return paciente
     })
@@ -37,7 +43,9 @@ export function PacienteProvider({ children }: { children: ReactNode }) {
         pacienteAtivo, 
         setPacienteAtivo, 
         analiseAtiva, 
-        setAnaliseAtiva 
+        setAnaliseAtiva,
+        jobIdAtivo,    // Compartilha o ID ativo
+        setJobIdAtivo  // Compartilha a função de atualizar o ID
       }}
     >
       {children}

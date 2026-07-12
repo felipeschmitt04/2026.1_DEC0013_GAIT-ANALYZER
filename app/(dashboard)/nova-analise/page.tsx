@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export default function NovaAnalisePage() {
-  const { pacienteAtivo, setAnaliseAtiva } = usePaciente(); 
+  const { pacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente(); 
   const router = useRouter();
   
   const [dragActive, setDragActive] = useState(false);
@@ -100,7 +100,12 @@ export default function NovaAnalisePage() {
 
       if (resAnalise.ok) {
         const dadosJob = await resAnalise.json();
+        
+        // Define o nome da análise ativa no contexto
         setAnaliseAtiva(nomeAnalise); 
+        
+        //  ALTERAÇÃO AQUI: Salva o ID retornado pelo servidor no Contexto Global na mesma hora
+        setJobIdAtivo(dadosJob.job_id || null);
         
         // Redireciona para a tela de visualização passando o id do processamento (job_id)
         router.push(`/visualizacao?jobId=${dadosJob.job_id || ""}`);

@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePaciente } from "@/app/PacienteContext";
 
-
 function getCookie(nome: string): string | null {
   if (typeof document === "undefined") return null
   const match = document.cookie.match(new RegExp(`(^| )${nome}=([^;]+)`))
@@ -28,16 +27,16 @@ interface Profissional {
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
-  const { setPacienteAtivo, setAnaliseAtiva } = usePaciente();
+  
+  //  ALTERAÇÃO AQUI: Extraímos o setJobIdAtivo do contexto para poder resetá-lo no logout
+  const { setPacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente();
 
   const [role, setRole] = useState<string | null>(null);
 
-  
   const [perfil, setPerfil] = useState<Profissional | null>(null);
   const [carregandoPerfil, setCarregandoPerfil] = useState(true);
   const [modoEdicaoPerfil, setModoEdicaoPerfil] = useState(false);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
-
 
   const [formNome, setFormNome] = useState("");
   const [formEspecialidade, setFormEspecialidade] = useState("");
@@ -91,14 +90,27 @@ export default function ConfiguracoesPage() {
       .finally(() => setCarregandoPerfil(false));
   }, [role]);
 
-  // logout
+  //  ALTERAÇÃO AQUI: Logout totalmente seguro que apaga a análise ativa e os dados locais
   const handleLogout = () => {
     if (!confirm("Deseja realmente sair?")) return;
+    
+    // Reseta toda a memória RAM global do Contexto
     setPacienteAtivo(null);
     setAnaliseAtiva(null);
+    setJobIdAtivo(null); // Limpa o ID da Azure para não vazar no próximo login
+    
+    // Limpa os dados salvos no navegador durante as seleções manuais
     localStorage.removeItem("paciente_selecionado");
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("analise_salva_")) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Limpa os cookies de autenticação da sessão clínica
     document.cookie = "user-role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "user-id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; // 🌟 NOVO: limpa também o user-id
+    document.cookie = "user-id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; 
+    
     router.push("/login");
   };
 
@@ -127,7 +139,7 @@ export default function ConfiguracoesPage() {
 
       setPerfil(data);
       setModoEdicaoPerfil(false);
-      alert("Perfil atualizado com sucesso!");
+      alert("Perfil updated com sucesso!");
     } catch (err: any) {
       alert(err.message || "Não foi possível salvar as alterações.");
     } finally {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react"; 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +24,7 @@ export default function LoginPage() {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, loginType: "normal" }),
       });
 
       const data = await response.json();
@@ -78,9 +77,6 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Senha</Label>
-                <Link href="/esqueci-senha" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline">
-                  Esqueceu sua senha?
-                </Link>
               </div>
               <Input 
                 id="password" 

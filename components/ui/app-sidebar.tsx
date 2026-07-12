@@ -35,7 +35,7 @@ export function AppSidebar() {
     const checkAdmin = document.cookie.includes("user-role=admin");
     setIsAdmin(checkAdmin);
   }, []);
-  // ... esconde o profissionais, protected proibe se nao tiver paciene selecionado
+  // ... esconde o profissionais, protected proibe se nao tiver paciente selecionado
   const items = [
     { title: "Pacientes", url: "/pacientes", icon: User, protected: false },
     ...(isAdmin ? [{ title: "Profissionais", url: "/admin/profissionais", icon: UserCog, protected: false }] : []),
@@ -103,15 +103,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-4 border-t border-slate-100 bg-slate-50/50">
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-tighter">
-            Sistema Online - 2026
-          </span>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
