@@ -6,6 +6,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | [%(levelname)s] %(
 logger = logging.getLogger("RenderLocal")
 
 def gerar_video_local():
+    """Renderiza localmente o video 3D a partir do NPZ de movimento.
+
+    Parametros:
+        Nenhum. Procura `movimento_exportado.npz` no diretorio atual.
+
+    Saida:
+        Nao retorna valor. Gera `3d_rebuild.mp4` quando o arquivo de entrada existe.
+    """
     arquivo_npz = 'movimento_exportado.npz'
     arquivo_saida = '3d_rebuild.mp4'
     

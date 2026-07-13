@@ -6,6 +6,7 @@ from threading import Lock
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from worker_engine import get_engine
 
@@ -26,6 +27,14 @@ process_lock = Lock()
 
 
 def clear_accelerator_caches() -> None:
+    """Limpa caches de aceleradores entre processamentos na DGX.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Se JAX/Equinox nao estiverem disponiveis, apenas registra aviso.
+    """
     try:
         import equinox as eqx
         import jax
@@ -40,6 +49,14 @@ def clear_accelerator_caches() -> None:
 
 @app.get("/health")
 async def health():
+    """Informa se o worker DGX esta vivo e se a engine ja foi carregada.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Status simples para monitoramento e diagnostico.
+    """
     return {
         "status": "ok",
         "engine_loaded": get_engine.loaded,
@@ -49,6 +66,14 @@ async def health():
 
 @app.post("/warmup")
 async def warmup():
+    """Forca o carregamento antecipado da engine pesada.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Nome da engine carregada e flag confirmando que ela esta pronta.
+    """
     try:
         engine = get_engine()
     except Exception as exc:
@@ -64,8 +89,69 @@ async def warmup():
 
 @app.post("/clear-cache")
 async def clear_cache():
+    """Endpoint operacional para limpar caches sem reiniciar o processo.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Mensagem de sucesso apos solicitar limpeza dos caches.
+    """
     clear_accelerator_caches()
     return {"status": "ok", "message": "Caches JAX/Equinox limpos"}
+
+
+def process_job_file(current_job_id: str, upload_path: Path, height_mm: int, rotated: bool = False):
+    """Processa um arquivo ja salvo e organiza a resposta bruta da DGX.
+
+    Parametros:
+        current_job_id: Identificador do job.
+        upload_path: Caminho local do video de entrada.
+        height_mm: Altura do usuario em milimetros.
+        rotated: Indica se os frames devem ser rotacionados.
+
+    Retorna:
+        Dicionario com `raw_data` e URLs locais dos artefatos gerados.
+    """
+    result_dir = RESULTS_DIR / current_job_id
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Job %s recebido. Iniciando engine pesada", current_job_id)
+
+    previous_cwd = Path.cwd()
+    with process_lock:
+        clear_accelerator_caches()
+        try:
+            os.chdir(result_dir)
+            engine = get_engine()
+            raw_data = engine.process_video(
+                video_path=str(upload_path),
+                height_mm=height_mm,
+                rotated=rotated,
+                output_dir=result_dir,
+            )
+        except Exception:
+            logger.exception("Falha no processamento do job %s", current_job_id)
+            raise
+        finally:
+            os.chdir(previous_cwd)
+            clear_accelerator_caches()
+
+    artifacts = {}
+    for filename, key in (
+        ("3d_rebuild.mp4", "video_3d"),
+        ("movimento_exportado.npz", "movement_npz"),
+    ):
+        artifact_path = result_dir / filename
+        if artifact_path.exists():
+            artifacts[key] = f"/results/{current_job_id}/artifacts/{filename}"
+
+    return {
+        "job_id": current_job_id,
+        "status": "completed",
+        "raw_data": raw_data,
+        "artifacts": artifacts,
+    }
 
 
 @app.post("/process")
@@ -75,6 +161,17 @@ async def process_video(
     rotated: bool = Form(False),
     job_id: str | None = Form(None),
 ):
+    """Recebe upload direto na API DGX e executa o processamento pesado.
+
+    Parametros:
+        video: Arquivo enviado por multipart/form-data.
+        height_mm: Altura do usuario em milimetros.
+        rotated: Flag de rotacao dos frames.
+        job_id: Identificador opcional enviado pelo backend chamador.
+
+    Retorna:
+        Saida de `process_job_file`, com resultado bruto e artefatos.
+    """
     if height_mm <= 0:
         raise HTTPException(status_code=422, detail="height_mm deve ser maior que zero")
 
@@ -89,38 +186,33 @@ async def process_video(
     with upload_path.open("wb") as buffer:
         shutil.copyfileobj(video.file, buffer)
 
-    logger.info("Job %s recebido. Iniciando engine pesada", current_job_id)
+    try:
+        return process_job_file(
+            current_job_id=current_job_id,
+            upload_path=upload_path,
+            height_mm=height_mm,
+            rotated=rotated,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    previous_cwd = Path.cwd()
-    with process_lock:
-        clear_accelerator_caches()
-        try:
-            os.chdir(result_dir)
-            engine = get_engine()
-            raw_data = engine.process_video(
-                video_path=str(upload_path),
-                height_mm=height_mm,
-                rotated=rotated,
-            )
-        except Exception as exc:
-            logger.exception("Falha no processamento do job %s", current_job_id)
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-        finally:
-            os.chdir(previous_cwd)
-            clear_accelerator_caches()
+@app.get("/results/{job_id}/artifacts/{filename}")
+async def get_result_artifact(job_id: str, filename: str):
+    """Disponibiliza artefatos gerados pela DGX para download.
 
-    artifacts = {}
-    for filename, key in (
-        ("3d_rebuild.mp4", "video_3d"),
-        ("movimento_exportado.npz", "movement_npz"),
-    ):
-        artifact_path = result_dir / filename
-        if artifact_path.exists():
-            artifacts[key] = str(artifact_path)
+    Parametros:
+        job_id: Identificador do job.
+        filename: Nome permitido do artefato solicitado.
 
-    return {
-        "job_id": current_job_id,
-        "status": "completed",
-        "raw_data": raw_data,
-        "artifacts": artifacts,
-    }
+    Retorna:
+        `FileResponse` com o arquivo, ou 404 se nao existir/nao for permitido.
+    """
+    allowed_filenames = {"3d_rebuild.mp4", "movimento_exportado.npz"}
+    if filename not in allowed_filenames:
+        raise HTTPException(status_code=404, detail="Artefato nao encontrado")
+
+    artifact_path = RESULTS_DIR / job_id / filename
+    if not artifact_path.exists():
+        raise HTTPException(status_code=404, detail="Artefato nao encontrado")
+
+    return FileResponse(artifact_path)

@@ -10,6 +10,16 @@ logger = logging.getLogger("InspectMuJoCo")
 
 
 def summarize_object(label, obj, max_items=120):
+    """Registra atributos relevantes de um objeto para investigacao.
+
+    Parametros:
+        label: Nome usado para identificar o objeto no log.
+        obj: Objeto inspecionado.
+        max_items: Quantidade maxima de atributos listados.
+
+    Saida:
+        Nao retorna valor. Escreve tipo, atributos e shapes no logger.
+    """
     names = sorted(name for name in dir(obj) if not name.startswith("__"))
     logger.info("%s type: %s", label, type(obj))
     logger.info("%s attrs: %s", label, names[:max_items])
@@ -34,6 +44,14 @@ def summarize_object(label, obj, max_items=120):
 
 
 def main():
+    """Inspeciona fontes e objetos do pacote de visualizacao MuJoCo.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Imprime o source de `render_trajectory` e logs do wrapper.
+    """
     logger.info("visualize module: %s", visualize.__file__)
 
     logger.info("===== render_trajectory source =====")

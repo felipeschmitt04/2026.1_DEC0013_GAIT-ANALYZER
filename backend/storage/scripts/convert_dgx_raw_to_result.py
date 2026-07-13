@@ -14,6 +14,14 @@ from app.services.skeleton import get_pose3d_skeleton_info
 
 
 def parse_args():
+    """Le os caminhos e parametros usados na conversao manual.
+
+    Parametros:
+        Nenhum diretamente; usa `sys.argv`.
+
+    Retorna:
+        Namespace com arquivo de entrada, saida e metadados simulados do video.
+    """
     parser = argparse.ArgumentParser(
         description="Converte a resposta raw do worker DGX para ResultV1."
     )
@@ -27,6 +35,14 @@ def parse_args():
 
 
 def main() -> None:
+    """Converte um JSON bruto da DGX para o contrato `ResultV1`.
+
+    Parametros:
+        Nenhum diretamente; usa argumentos da CLI.
+
+    Saida:
+        Nao retorna valor. Grava o arquivo de saida e imprime um resumo no terminal.
+    """
     args = parse_args()
     payload = json.loads(args.input.read_text(encoding="utf-8"))
     raw_data = payload["raw_data"]

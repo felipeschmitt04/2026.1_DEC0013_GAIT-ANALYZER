@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
@@ -26,7 +27,17 @@ from monocular_demos.utils import video_reader
 
 
 class GaitAnalysisEngine:
+    """Engine real executada na DGX para analise completa de marcha."""
+
     def __init__(self, window_L: int = 150):
+        """Inicializa configuracoes, esqueleto e modelos da engine.
+
+        Parametros:
+            window_L: Janela temporal usada pelo GaitTransformer.
+
+        Saida:
+            Nao retorna valor. Carrega MeTRAbs e GaitTransformer na instancia.
+        """
         self.window_L = window_L
         self.metrabs_model = None
         self.transformer_model = None
@@ -38,6 +49,14 @@ class GaitAnalysisEngine:
         self._load_models()
 
     def _setup_gpu(self):
+        """Ativa crescimento dinamico de memoria no TensorFlow.
+
+        Parametros:
+            Nenhum alem da instancia.
+
+        Saida:
+            Nao retorna valor. Configura GPUs quando elas existem.
+        """
         gpus = tf.config.list_physical_devices("GPU")
         if gpus:
             try:
@@ -50,6 +69,14 @@ class GaitAnalysisEngine:
             logger.warning("Nenhuma GPU detectada pelo TensorFlow")
 
     def _load_models(self):
+        """Carrega os modelos de pose 3D e fase da marcha.
+
+        Parametros:
+            Nenhum alem da instancia.
+
+        Saida:
+            Nao retorna valor. Preenche `metrabs_model` e `transformer_model`.
+        """
         logger.info("Carregando MeTRAbs")
         self.metrabs_model = hub.load("https://bit.ly/metrabs_l")
 
@@ -59,6 +86,14 @@ class GaitAnalysisEngine:
         logger.info("Modelos carregados")
 
     def calculate_kinematics(self, raw_pose3d):
+        """Ajusta o modelo biomecanico e exporta angulos/modelo 3D.
+
+        Parametros:
+            raw_pose3d: Keypoints 3D no esqueleto usado para fitting.
+
+        Retorna:
+            Angulos, timestamps e payload `model3d` para visualizacao no frontend.
+        """
         pose = raw_pose3d.copy()
         pose = pose[:, :, [0, 2, 1]]
         pose[:, :, 2] *= -1
@@ -78,7 +113,18 @@ class GaitAnalysisEngine:
 
         return ang, dataset[0], model3d
 
-    def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
+        """Executa a analise real do video do inicio ao fim.
+
+        Parametros:
+            video_path: Caminho do video local.
+            height_mm: Altura do usuario em milimetros.
+            rotated: Indica se os frames precisam ser rotacionados.
+            output_dir: Pasta de saida para artefatos.
+
+        Retorna:
+            Dicionario bruto com pose, eventos, cinematicas, `model3d`, diagnosticos e artefatos.
+        """
         logger.info("Processando video real: %s", video_path)
 
         vid, n_frames = video_reader(video_path)
@@ -173,11 +219,13 @@ class GaitAnalysisEngine:
 
         angles_3d, timestamps_jax, model3d = self.calculate_kinematics(pose3d_fitting)
 
-        np.savez("movimento_exportado.npz", angulos=angles_3d, timestamps=timestamps_jax)
+        artifact_dir = Path(output_dir) if output_dir is not None else Path(video_path).parent
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        movement_npz = artifact_dir / "movimento_exportado.npz"
+        np.savez(movement_npz, angulos=angles_3d, timestamps=timestamps_jax)
 
         return {
             "status": "sucesso",
-            "video_3d": None,
             "pose3d": keypoints.tolist(),
             "events": state.tolist(),
             "kinematics": {
@@ -186,4 +234,7 @@ class GaitAnalysisEngine:
             },
             "model3d": model3d,
             "diagnostics": diagnostics,
+            "artifacts": {
+                "movement_npz": str(movement_npz),
+            },
         }

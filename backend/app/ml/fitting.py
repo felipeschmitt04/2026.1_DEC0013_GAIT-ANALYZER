@@ -9,6 +9,14 @@ from tqdm import trange
 from monocular_demos.biomechanics_mjx.monocular_trajectory import KineticsWrapper
 
 def clear_jit_caches() -> None:
+    """Limpa caches JIT antes/depois do fitting para aliviar memoria.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Pede limpeza para Equinox e JAX.
+    """
     eqx.clear_caches()
     jax.clear_caches()
 
@@ -18,6 +26,17 @@ def loss(
     y: Float[Array, "times keypoints 3"],
     site_offset_regularization = 1e-1
 ) -> Tuple[Float, Dict]:
+    """Calcula o erro entre o modelo biomecanico e os keypoints 3D.
+
+    Parametros:
+        model: Wrapper cinetico ajustavel.
+        x: Timestamps dos frames.
+        y: Keypoints 3D alvo.
+        site_offset_regularization: Peso para evitar offsets exagerados nos sites.
+
+    Retorna:
+        Tupla com valor de loss e metricas auxiliares para monitoramento.
+    """
 
     timestamps = x
     keypoints3d = y
@@ -47,6 +66,19 @@ def loss(
 
 @eqx.filter_jit
 def step(model, opt_state, data, loss_grad, optimizer, **kwargs):
+    """Executa uma iteracao JIT de otimizacao do fitting.
+
+    Parametros:
+        model: Modelo atual.
+        opt_state: Estado interno do otimizador.
+        data: Tupla `(timestamps, keypoints3d)`.
+        loss_grad: Funcao que calcula loss e gradientes.
+        optimizer: Otimizador Optax.
+        **kwargs: Ajustes extras repassados para a loss.
+
+    Retorna:
+        Valor da loss, modelo atualizado, novo estado do otimizador e metricas.
+    """
     x, targets = data
     (val, metrics), grads = loss_grad(model, x=x, y=targets, **kwargs)
     params = eqx.filter(model, eqx.is_inexact_array)
@@ -61,6 +93,19 @@ def fit_model(
     max_iters: int = 5000,
     clip_by_global_norm: float = 0.1,
 ):
+    """Ajusta o modelo biomecanico aos keypoints 3D detectados.
+
+    Parametros:
+        model: Wrapper inicial do modelo.
+        dataset: Tupla com timestamps e keypoints normalizados.
+        lr_end_value: Taxa de aprendizado final.
+        lr_init_value: Taxa de aprendizado inicial.
+        max_iters: Quantidade de iteracoes de otimizacao.
+        clip_by_global_norm: Limite para estabilizar gradientes.
+
+    Retorna:
+        Modelo ajustado e ultimas metricas de treinamento.
+    """
     clear_jit_caches()
 
     transition_steps = 10
