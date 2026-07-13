@@ -320,12 +320,6 @@ Para este projeto, a VM CPU deve ser usada principalmente para:
 - integrar com o frontend;
 - validar contrato HTTP.
 
-Ela não deve ser considerada uma VM de GPU. O processamento pesado com MeTRAbs, JAX, TensorFlow, MuJoCo/MJX e fitting completo pode exigir outro ambiente, como uma VM GPU configurada separadamente (não incluída no pacote Azure for Students).
-
-Depois que a VM estiver criada e acessível por SSH, os próximos passos são:
-
-1. instalar Docker;
-2. clonar o repositório do backend;
-3. subir a API em modo mock;
-4. testar `GET /health`;
-5. liberar a porta da API apenas quando for necessário integrar com o frontend.
+Ela não deve ser considerada uma VM de GPU. O processamento pesado com MeTRAbs,
+JAX, TensorFlow, MuJoCo/MJX e fitting completo deve ficar em outro ambiente,
+como a DGX da UFSC.

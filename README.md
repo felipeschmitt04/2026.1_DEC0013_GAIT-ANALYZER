@@ -154,5 +154,3 @@ Toda a documentação oficial do projeto está em português:
 - [Contrato da API](docs/backend/10-api.md)
 - [Deploy do backend](docs/backend/09-deploy.md)
 - [Deploy do frontend](docs/frontend/06-deploy-azure-app-service.md)
-
-O diagrama da apresentação do Sprint 3 pode ser adicionado depois nesta seção.

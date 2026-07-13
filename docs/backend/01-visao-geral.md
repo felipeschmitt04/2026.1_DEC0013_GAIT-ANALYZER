@@ -112,6 +112,3 @@ O projeto já possui:
 - worker DGX em `engine_dgx/`;
 - documentação do contrato da API;
 - demo Three.js para inspecionar `model3d`, `fitting` e `pose3d`.
-
-Os próximos pontos de estabilização são testes automatizados, documentação de
-deploy mais operacional e validação contínua do fluxo mock com Docker CPU.

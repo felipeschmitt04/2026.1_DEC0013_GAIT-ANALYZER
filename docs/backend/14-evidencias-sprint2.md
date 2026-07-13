@@ -290,31 +290,11 @@ A validacao confirma que o backend esta apto para o Sprint 2 no escopo proposto:
   com dependencias pesadas e/ou GPU.
 - A Azure atual e CPU, portanto não deve ser tratada como ambiente de
   processamento pesado.
-- A visualização 3D final será implementada no frontend.
-- O backend ainda processa de forma sincrona; fila/worker fica para evolucao
-  futura.
+- A visualização 3D final fica no frontend.
+- O Sprint 3 substituiu o processamento síncrono puro pelo fluxo com fila e
+  worker DGX pull-based.
 
-## 11. Proximos Passos Sugeridos
-
-Para integração com frontend:
-
-- publicar o backend na VM Azure;
-- configurar `CORS_ORIGINS` com a URL do frontend do Eduardo;
-- entregar a URL base da API;
-- entregar exemplo real de JSON;
-- validar `POST /analyze` a partir da VM/frontend.
-
-Para Sprint 3:
-
-- estudar worker remoto para processamento pesado na DGX;
-- manter o contrato `ResultV1` estavel;
-- avaliar uma abstracao de engine com modos `mock`, `local` e `remote`;
-- criar visualização Three.js inicialmente baseada em `data.pose3d` e
-  `data.skeleton`;
-- deixar `data.fitting` como base para uma visualização biomecanica mais
-  precisa no futuro.
-
-## 12. Comandos Limpos Para Repetir A Validacao
+## 11. Comandos Limpos Para Repetir A Validacao
 
 ```bash
 docker build -f backend/Dockerfile.cpu -t gait-analyzer-backend:cpu .

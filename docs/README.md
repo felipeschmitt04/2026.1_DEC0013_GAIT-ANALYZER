@@ -20,13 +20,3 @@ docs/
 6. [Integração do frontend com a API](frontend/10-integracao-api-polling.md)
 7. [Deploy do backend](backend/09-deploy.md)
 8. [Deploy do frontend](frontend/06-deploy-azure-app-service.md)
-
-## Convenções
-
-- A documentação em inglês foi removida. A versão em português é a fonte única.
-- Arquivos de documentação usam nomes numerados em `kebab-case`.
-- Caminhos de código não recebem acentos, mesmo quando o texto ao redor está em
-  português. Exemplo: `app/api/analises/route.ts`.
-- Materiais gerados, como vídeos, NPZs e relatórios PDF de exemplo, não devem
-  entrar no Git sem decisão explícita. Quando houver um PDF de exemplo aprovado,
-  ele pode ser citado no README geral.
