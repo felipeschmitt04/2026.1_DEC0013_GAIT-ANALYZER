@@ -60,3 +60,20 @@ TypeScript
 const response = await fetch(`https://gait-analyzer-back.azurewebsites.net/results/${jobId}`)
 const data = await response.json()
 ```
+
+# 3. API de Relatório (`app/api/analises/relatorio/route.ts`)
+
+A funcionalidade de geração de relatórios também utiliza a API interna do Next.js como intermediária. Essa rota recebe a solicitação do frontend, encaminha a requisição ao backend de IA e devolve o relatório gerado ao navegador.
+
+- **Onde alterar:** Localize o arquivo `route.ts` dentro de `app/api/analises/relatorio/`.
+- **Substituição técnica:** Atualize a constante que define o endereço do backend para utilizar a URL oficial da aplicação hospedada na Azure.
+
+Exemplo de alteração no código:
+
+```
+// Em desenvolvimento (Local/Mock):
+// const BACKEND_URL = "http://localhost:8000"
+
+// Em produção (Link oficial do Backend na Azure):
+const BACKEND_URL = "[https://gait-analyzer-back.azurewebsites.net](https://gait-analyzer-back.azurewebsites.net)" 
+```

@@ -25,7 +25,7 @@ gait_analyzer/
 │   │   ├── relatorio/          # Exibição de gráficos e métricas clínicas
 │   ├   ├── layout.tsx          # Estrutura base visual das páginas
 │   │   └── visualizacao/       # Visualizador do modelo 3D
-│   ├── api/                    # APIs Internas (analises, pacientes, login)
+│   ├── api/                    # APIs Internas (analises, pacientes, login e relatorio)
 │   ├── layout.tsx              # Estrutura base visual das páginas
 │   └── PacienteContext.tsx     # Gerenciamento de Estado Global (Sessão)
 ├── components/                 # Pedaços visuais reaproveitáveis, Shadcn UI
