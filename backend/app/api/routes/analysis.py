@@ -350,21 +350,6 @@ def _collect_job_summaries() -> list[dict]:
     )
 
 
-def _report_is_outdated(result_path: Path, report_path: Path) -> bool:
-    """Verifica se o PDF precisa ser gerado novamente.
-
-    Parametros:
-        result_path: Caminho do `result.json`.
-        report_path: Caminho do PDF.
-
-    Retorna:
-        `True` quando o PDF nao existe ou e mais antigo que o resultado.
-    """
-    if not report_path.exists():
-        return True
-    return report_path.stat().st_mtime < result_path.stat().st_mtime
-
-
 def _ensure_report_pdf(job_id: str) -> Path:
     """Garante que o relatorio PDF existe para um job finalizado.
 
@@ -380,27 +365,26 @@ def _ensure_report_pdf(job_id: str) -> Path:
     report_path = result_dir / REPORT_FILENAME
 
     if not result_path.exists():
-        raise HTTPException(status_code=404, detail="Resultado nao encontrado")
+        raise HTTPException(status_code=404, detail="Resultado não encontrado")
 
     payload = _read_json(result_path)
     if (payload.get("job") or {}).get("status") != "completed" or not payload.get("data"):
-        raise HTTPException(status_code=409, detail="Relatorio disponivel apenas para analises concluidas")
+        raise HTTPException(status_code=409, detail="Relatório disponível apenas para análises concluídas")
 
-    if _report_is_outdated(result_path, report_path):
-        data = payload.setdefault("data", {})
-        artifacts = data.get("artifacts") or {}
-        data["artifacts"] = artifacts
-        if artifacts.get("report_pdf") != f"/results/{job_id}/report.pdf":
-            artifacts["report_pdf"] = f"/results/{job_id}/report.pdf"
-            _write_json(result_path, payload)
+    data = payload.setdefault("data", {})
+    artifacts = data.get("artifacts") or {}
+    data["artifacts"] = artifacts
+    if artifacts.get("report_pdf") != f"/results/{job_id}/report.pdf":
+        artifacts["report_pdf"] = f"/results/{job_id}/report.pdf"
+        _write_json(result_path, payload)
 
-        try:
-            generate_gait_report_pdf(payload, report_path)
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-        except RuntimeError as exc:
-            logger.exception("Falha de dependencia ao gerar relatorio do job %s", job_id)
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+    try:
+        generate_gait_report_pdf(payload, report_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        logger.exception("Falha de dependência ao gerar relatório do job %s", job_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return report_path
 

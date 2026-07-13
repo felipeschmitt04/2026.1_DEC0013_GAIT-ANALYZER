@@ -12,13 +12,13 @@ REPORT_FILENAME = "relatorio_analise_marcha.pdf"
 
 
 def _format_datetime(value: str | None) -> str:
-    """Formata timestamps ISO para exibicao humana no relatorio.
+    """Formata timestamps ISO para exibição humana no relatório.
 
     Parametros:
         value: Timestamp em ISO-8601 vindo do `ResultV1`.
 
     Retorna:
-        Texto formatado em `dd/mm/aaaa hh:mm`, ou `-` quando nao houver valor valido.
+        Texto formatado em `dd/mm/aaaa hh:mm`, ou `-` quando não houver valor válido.
     """
     if not value:
         return "-"
@@ -32,7 +32,7 @@ def _format_datetime(value: str | None) -> str:
 
 
 def _format_number(value: Any, suffix: str = "", decimals: int = 2) -> str:
-    """Transforma numeros em texto curto para tabelas do PDF.
+    """Transforma números em texto curto para tabelas do PDF.
 
     Parametros:
         value: Valor numerico ou texto.
@@ -40,7 +40,7 @@ def _format_number(value: Any, suffix: str = "", decimals: int = 2) -> str:
         decimals: Casas decimais para floats.
 
     Retorna:
-        Texto pronto para renderizacao em tabela.
+        Texto pronto para renderização em tabela.
     """
     if value is None:
         return "-"
@@ -143,7 +143,7 @@ def _asymmetry_percent(right_value: float | None, left_value: float | None) -> f
 
 
 def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
-    """Monta linhas comparativas para a tabela clinica principal.
+    """Monta linhas comparativas para a tabela clínica principal.
 
     Parametros:
         metrics: Bloco `data.metricas_clinicas` do resultado.
@@ -153,13 +153,13 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
     """
     comparisons = [
         (
-            "Flexao maxima do joelho",
+            "Flexão máxima do joelho",
             "joelho_direito_graus",
             "joelho_esquerdo_graus",
             " graus",
         ),
         (
-            "Flexao media do joelho",
+            "Flexão média do joelho",
             "joelho_direito_graus",
             "joelho_esquerdo_graus",
             " graus",
@@ -173,13 +173,13 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
             "range",
         ),
         (
-            "Flexao maxima do quadril",
+            "Flexão máxima do quadril",
             "quadril_direito_graus",
             "quadril_esquerdo_graus",
             " graus",
         ),
         (
-            "Flexao media do quadril",
+            "Flexão média do quadril",
             "quadril_direito_graus",
             "quadril_esquerdo_graus",
             " graus",
@@ -194,7 +194,7 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
         ),
     ]
 
-    rows = [["Metrica", "Direito", "Esquerdo", "Diferenca", "Assimetria"]]
+    rows = [["Métrica", "Direito", "Esquerdo", "Diferença", "Assimetria"]]
     for comparison in comparisons:
         label, right_key, left_key, unit, *stat_name = comparison
         stat = stat_name[0] if stat_name else "max"
@@ -221,7 +221,7 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
     ankle_stats = _series_stats(_as_float_series(metrics.get("distancia_tornozelos_mm")))
     rows.append(
         [
-            "Distancia media entre tornozelos",
+            "Distância média entre tornozelos",
             _format_number(ankle_stats["mean"], " mm"),
             "-",
             "-",
@@ -230,7 +230,7 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
     )
     rows.append(
         [
-            "Variacao da distancia entre tornozelos",
+            "Variação da distância entre tornozelos",
             _format_number(ankle_stats["range"], " mm"),
             "-",
             "-",
@@ -242,14 +242,14 @@ def _metric_summary_rows(metrics: dict[str, Any]) -> list[list[str]]:
 
 
 def _build_observations(metrics: dict[str, Any], quality_info: dict[str, Any]) -> list[str]:
-    """Gera observacoes automaticas conservadoras para o relatorio.
+    """Gera observações automáticas conservadoras para o relatório.
 
     Parametros:
-        metrics: Metricas clinicas calculadas a partir da pose 3D.
-        quality_info: Informacoes de qualidade do processamento.
+        metrics: Métricas clínicas calculadas a partir da pose 3D.
+        quality_info: Informações de qualidade do processamento.
 
     Retorna:
-        Lista de frases curtas para orientar a leitura dos graficos.
+        Lista de frases curtas para orientar a leitura dos gráficos.
     """
     observations = []
 
@@ -267,30 +267,30 @@ def _build_observations(metrics: dict[str, Any], quality_info: dict[str, Any]) -
         if difference is not None and difference >= 5:
             higher_side = "direito" if right_max > left_max else "esquerdo"
             observations.append(
-                f"O {label} {higher_side} apresentou maior pico de flexao "
-                f"(diferenca aproximada de {_format_number(difference, ' graus')})."
+                f"O {label} {higher_side} apresentou maior pico de flexão "
+                f"(diferença aproximada de {_format_number(difference, ' graus')})."
             )
 
     frames_without_detection = quality_info.get("frames_without_detection") or 0
     if frames_without_detection:
         observations.append(
-            "A analise teve frames sem deteccao completa de pose, portanto os graficos "
+            "A análise teve frames sem detecção completa de pose, portanto os gráficos "
             "devem ser interpretados junto com os avisos de qualidade."
         )
 
     warnings = quality_info.get("warnings") or []
     if warnings:
         observations.append(
-            "O video gerou avisos de qualidade; eles podem influenciar a precisao das metricas."
+            "O vídeo gerou avisos de qualidade; eles podem influenciar a precisão das métricas."
         )
 
     if not observations:
         observations.append(
-            "Nao foram observadas diferencas numericas relevantes pelas regras simples deste relatorio."
+            "Não foram observadas diferenças numéricas relevantes pelas regras simples deste relatório."
         )
 
     observations.append(
-        "Este relatorio e um apoio quantitativo para avaliacao clinica e nao substitui diagnostico profissional."
+        "Este relatório é um apoio quantitativo para avaliação clínica e não substitui diagnóstico profissional."
     )
     return observations
 
@@ -306,7 +306,7 @@ def _save_comparison_plot(
     """Gera um grafico de linhas comparando lado direito e esquerdo.
 
     Parametros:
-        metrics: Metricas clinicas do resultado.
+        metrics: Métricas clínicas do resultado.
         right_key: Chave da serie direita.
         left_key: Chave da serie esquerda.
         title: Titulo do grafico.
@@ -352,7 +352,7 @@ def _save_single_plot(
     """Gera um grafico de uma unica serie temporal.
 
     Parametros:
-        metrics: Metricas clinicas do resultado.
+        metrics: Métricas clínicas do resultado.
         key: Chave da serie desejada.
         title: Titulo do grafico.
         ylabel: Rotulo do eixo Y.
@@ -481,18 +481,18 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
         leftMargin=1.25 * cm,
         topMargin=1.15 * cm,
         bottomMargin=1.35 * cm,
-        title="Relatorio de Analise de Marcha",
+        title="Relatório de Análise de Marcha",
     )
     content_width = A4[0] - doc.leftMargin - doc.rightMargin
     header = Table(
         [
             [
-                Paragraph("Relatorio de Analise de Marcha", title_style),
+                Paragraph("Relatório de Análise de Marcha", title_style),
             ],
             [
                 Paragraph(
-                    "Gait Analyzer - resumo quantitativo de metricas biomecanicas, "
-                    "graficos comparativos e indicadores de qualidade.",
+                    "Gait Analyzer - resumo quantitativo de métricas biomecânicas, "
+                    "gráficos comparativos e indicadores de qualidade.",
                     subtitle_style,
                 ),
             ],
@@ -533,22 +533,22 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
             _format_number(input_summary.get("fps"), ""),
         ],
         [
-            "Duracao",
+            "Duração",
             _format_number(input_summary.get("duration_ms"), " ms"),
             "Frames",
             _format_number(quality_info.get("frames_total"), ""),
         ],
         [
-            "Frames sem deteccao",
+            "Frames sem detecção",
             _format_number(quality_info.get("frames_without_detection"), ""),
             "Rotacionado",
             str(input_summary.get("rotated", "-")),
         ],
     ]
-    story.append(Paragraph("Resumo da analise", section_style))
+    story.append(Paragraph("Resumo da análise", section_style))
     story.append(_styled_table(summary_rows, col_widths=[3.4 * cm, 6.0 * cm, 3.2 * cm, 4.8 * cm]))
 
-    story.append(Paragraph("Metricas clinicas comparativas", section_style))
+    story.append(Paragraph("Métricas clínicas comparativas", section_style))
     story.append(_styled_table(_metric_summary_rows(metrics), col_widths=[6.2 * cm, 2.75 * cm, 2.75 * cm, 2.75 * cm, 2.95 * cm]))
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -557,14 +557,14 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
             (
                 "joelho_direito_graus",
                 "joelho_esquerdo_graus",
-                "Flexao do joelho: direito vs esquerdo",
+                "Flexão do joelho: direito vs esquerdo",
                 "Graus",
                 temp_path / "joelho.png",
             ),
             (
                 "quadril_direito_graus",
                 "quadril_esquerdo_graus",
-                "Flexao do quadril: direito vs esquerdo",
+                "Flexão do quadril: direito vs esquerdo",
                 "Graus",
                 temp_path / "quadril.png",
             ),
@@ -572,8 +572,8 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
         single_specs = [
             (
                 "distancia_tornozelos_mm",
-                "Distancia entre tornozelos ao longo do tempo",
-                "Milimetros",
+                "Distância entre tornozelos ao longo do tempo",
+                "Milímetros",
                 temp_path / "tornozelos.png",
             )
         ]
@@ -587,17 +587,17 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
                 images.append(path)
 
         if images:
-            story.append(Paragraph("Graficos", section_style))
+            story.append(Paragraph("Gráficos", section_style))
             for image_path in images:
                 story.append(Image(str(image_path), width=17.0 * cm, height=7.3 * cm))
                 story.append(Spacer(1, 0.2 * cm))
 
-        story.append(Paragraph("Observacoes automaticas", section_style))
+        story.append(Paragraph("Observações automáticas", section_style))
         for observation in _build_observations(metrics, quality_info):
             story.append(Paragraph(f"- {observation}", body_style))
 
         warnings = quality_info.get("warnings") or []
-        story.append(Paragraph("Qualidade da analise", section_style))
+        story.append(Paragraph("Qualidade da análise", section_style))
         if warnings:
             warning_text = ", ".join(str(item) for item in warnings)
         else:
@@ -610,14 +610,14 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
 
 
 def _draw_footer(canvas, doc) -> None:
-    """Desenha rodape discreto com paginacao e aviso clinico.
+    """Desenha rodapé discreto com paginação e aviso clínico.
 
     Parametros:
         canvas: Canvas ReportLab da pagina atual.
         doc: Documento em construcao.
 
     Saida:
-        Nao retorna valor. Escreve diretamente no canvas.
+        Não retorna valor. Escreve diretamente no canvas.
     """
     from reportlab.lib import colors
 
@@ -632,9 +632,9 @@ def _draw_footer(canvas, doc) -> None:
     canvas.drawString(
         doc.leftMargin,
         y,
-        "Relatorio gerado automaticamente - interpretar como apoio quantitativo.",
+        "Relatório gerado automaticamente - interpretar como apoio quantitativo.",
     )
-    canvas.drawRightString(page_width - doc.rightMargin, y, f"Pagina {doc.page}")
+    canvas.drawRightString(page_width - doc.rightMargin, y, f"Página {doc.page}")
     canvas.restoreState()
 
 
