@@ -49,6 +49,10 @@ secrets.json
 *.swp
 *.swo
 
+# Local assistant/tooling notes
+AGENTS.md
+CLAUDE.md
+
 # Logs
 *.log
 logs/
