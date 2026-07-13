@@ -1,156 +1,158 @@
 # Gait Analyzer
 
 Sistema acadêmico de análise de marcha humana desenvolvido para a disciplina de
-Projeto Integrador em Engenharia da Computação. O backend recebe vídeos de
-marcha, executa reconstrução 3D e retorna métricas biomecânicas para consumo por
-um frontend web.
+Projeto Integrador em Engenharia da Computação. O projeto recebe vídeos de
+marcha, processa a movimentação com uma engine biomecânica, exibe resultados no
+frontend e gera um relatório clínico em PDF.
 
-## Visão Geral
+## Visão geral
 
-O projeto usa FastAPI para expor a API e uma engine de processamento baseada em
-MeTRAbs, GaitTransformer, JAX, TensorFlow, Equinox e Optax. A arquitetura foi
-organizada para permitir execução em diferentes ambientes:
+O sistema foi dividido em três responsabilidades principais:
 
-- Azure CPU ou máquina local com Docker CPU em modo mock;
-- DGX H100 da UFSC com ambiente conda para a engine pesada;
-- frontend web externo consumindo somente a API HTTP.
+- **Frontend web**: interface para login, cadastro de pacientes, envio de vídeo,
+  acompanhamento de análises, visualização 3D, gráficos e download do relatório.
+- **Backend FastAPI**: API central, validação de uploads, fila de jobs,
+  contrato `ResultV1`, armazenamento de resultados e geração do PDF clínico.
+- **Engine DGX**: processamento pesado executado na DGX da UFSC por ambiente
+  conda, consumindo jobs da API central em modo pull-based.
 
-O Docker GPU não é o caminho atual do projeto, porque a DGX disponível não roda
-Docker para o aluno. O processamento pesado na DGX fica isolado em
-`engine_dgx/`.
+O frontend nunca chama a DGX diretamente. A DGX consulta a API, busca jobs
+pendentes, processa o vídeo e envia o resultado de volta. O frontend conversa
+com o backend central e usa o Supabase para persistir pacientes, profissionais e
+histórico das análises.
+
+## Tecnologias
+
+| Área | Tecnologias |
+| --- | --- |
+| Frontend | Next.js App Router, React, TypeScript, TailwindCSS, Shadcn UI, Radix UI, Lucide React, Three.js |
+| Banco do frontend | Supabase PostgreSQL e Prisma ORM |
+| Backend | Python, FastAPI, Pydantic, Uvicorn, OpenCV, ReportLab, Matplotlib |
+| Engine de marcha | MeTRAbs, GaitTransformer, TensorFlow, JAX, Equinox, Optax, MuJoCo/MJX |
+| Infraestrutura | Docker CPU, Azure VM, Azure App Service, sslip.io para HTTPS temporário |
+| Qualidade | Pytest, ESLint, tipagem TypeScript e documentação em Markdown |
 
 ## Estrutura
 
 ```text
-backend/
-├── app/                    # API FastAPI, pipeline, schemas e serviços
-├── storage/                # Uploads, resultados e temporários
-└── Dockerfile.cpu          # Imagem leve para API/mock
-
-engine_dgx/
-└── main.py                 # Worker FastAPI para a DGX
-
-frontend-demo/
-└── index.html              # Validador Three.js para ResultV1/model3d
-
-docs/
-├── backend/                # Documentação desta entrega/backend
-│   └── pt-br/00-indice.md  # Índice principal em português
-└── frontend/               # Reservado para documentação do frontend
+.
+├── app/                    # Frontend Next.js e rotas internas de API
+├── components/             # Componentes visuais reutilizáveis
+├── lib/                    # Utilitários do frontend e conexão Prisma
+├── prisma/                 # Schema e migrations do banco Supabase
+├── backend/                # API FastAPI, schemas, serviços, storage e testes
+├── engine_dgx/             # Worker/engine pesada para execução na DGX
+├── docs/                   # Documentação técnica em português
+└── Dockerfile              # Imagem do frontend
 ```
 
-## Configuração
+## Fluxo de análise
 
-Use [backend/.env.example](backend/.env.example) como referência. O arquivo
-`.env` real não deve ser versionado.
+1. O profissional seleciona um paciente e envia um vídeo pelo frontend.
+2. O frontend cria um `FormData` com `video`, `height_mm` e `rotated`.
+3. A rota interna do Next.js encaminha o upload para `POST /analyze`.
+4. O backend salva o vídeo, cria o job e devolve um `job_id`.
+5. O frontend salva a análise no Supabase usando o mesmo `job_id`.
+6. A DGX consulta `/worker/jobs/next`, baixa o vídeo e processa a marcha.
+7. A DGX envia o resultado para o backend, que monta o `ResultV1`.
+8. O frontend consulta `/status/{job_id}` e `/results/{job_id}` para exibir o
+   resultado.
+9. O relatório clínico é baixado por `/results/{job_id}/report.pdf`, passando
+   pela rota interna `app/api/analises/relatorio/route.ts`.
 
-A configuração completa está em
-[Configuração do Ambiente](docs/backend/pt-br/06-configuracao-ambiente.md).
+## Rodar o backend
 
-## Execução Com Docker CPU
+Copie [backend/.env.example](backend/.env.example) para `backend/.env` ou defina
+as variáveis no ambiente.
 
-Na raiz do repositório:
-
-```bash
-docker build -f backend/Dockerfile.cpu -t gait-analyzer-backend:cpu .
-docker run --rm -p 8000:8000 gait-analyzer-backend:cpu
-```
-
-Mais detalhes em [Docker CPU](docs/backend/pt-br/08-docker.md).
-
-## Execução Sem Docker
+Modo mock/local de desenvolvimento:
 
 ```bash
 cd backend
 ENGINE_MODE=mock uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Mais detalhes em
-[Execução sem Docker](docs/backend/pt-br/07-execucao-sem-docker.md) e
-[DGX UFSC](docs/backend/pt-br/11-dgx-ufsc.md).
+Com Docker CPU:
 
-## API
+```bash
+docker build -f backend/Dockerfile.cpu -t gait-analyzer-backend:cpu .
+docker run --rm -p 8000:8000 -e ENGINE_MODE=mock gait-analyzer-backend:cpu
+```
 
-Endpoints principais:
+Modo fila com DGX:
 
-- `GET /health`
-- `POST /analyze`
-- `GET /jobs`
-- `GET /status/{job_id}`
-- `GET /results/{job_id}`
-- `GET /results/{job_id}/report.pdf`
-- `GET /results/{job_id}/artifacts/{filename}`
+```bash
+docker run -d --name gait-api \
+  -p 8000:8000 \
+  -e ENGINE_MODE=queue \
+  -e WORKER_TOKEN="troque-este-token" \
+  -e CORS_ORIGINS="https://seu-front.azurewebsites.net" \
+  gait-analyzer-backend:cpu
+```
 
-O contrato completo está em
-[Contrato da API](docs/backend/pt-br/10-api.md).
+Na DGX:
 
-## CI/CD Em Termos Simples
+```bash
+cd engine_dgx
+export BACKEND_URL="https://sua-api.sslip.io"
+export WORKER_TOKEN="mesmo-token-do-backend"
+python pull_worker.py
+```
 
-CI significa integracao continua: o GitHub roda automaticamente checagens quando ha push ou pull request. Neste repositorio, a CI instala as dependencias leves do backend, compila os modulos Python e executa os testes.
+## Rodar o frontend
 
-CD significa entrega/deploy continuo. Este projeto ainda nao faz deploy automatico; atualizar Azure ou DGX continua sendo um passo manual documentado.
+Crie `.env` na raiz com a conexão do Supabase:
+
+```env
+DATABASE_URL="postgresql://postgres:SENHA@db.PROJETO.supabase.co:5432/postgres"
+```
+
+Instale dependências e rode o Next.js:
+
+```bash
+npm install
+npx prisma generate
+npm run dev
+```
+
+O frontend usa rotas internas em `app/api/` para proteger credenciais e
+intermediar chamadas ao backend. A URL pública atual do backend fica nas rotas
+internas de análise e relatório; em produção, ela deve apontar para a API
+publicada na Azure.
+
+## Relatório PDF
+
+O backend gera o relatório clínico sob demanda em:
+
+```text
+GET /results/{job_id}/report.pdf
+```
+
+O PDF inclui identificação do job, resumo do vídeo, métricas clínicas, gráficos
+comparativos entre lados direito e esquerdo e observações técnicas. O arquivo é
+salvo em `backend/storage/results/{job_id}/relatorio_analise_marcha.pdf` e não
+deve ser versionado.
+
+## Deploy
+
+- **Backend**: roda em VM Azure com Docker CPU. Para integração real com a DGX,
+  use `ENGINE_MODE=queue` e mantenha volume persistente para `backend/storage`.
+- **DGX**: roda `engine_dgx/pull_worker.py` por conda. Ela precisa acessar a URL
+  pública do backend e usar o mesmo `WORKER_TOKEN`.
+- **Frontend**: pode rodar no Azure App Service ou Vercel. O App Service já
+  fornece HTTPS no domínio padrão `azurewebsites.net`.
+- **HTTPS temporário do backend**: pode ser obtido com domínio `sslip.io`
+  apontando para o IP público da VM, por exemplo `https://IP-com-hifens.sslip.io`.
 
 ## Documentação
 
-O `frontend-demo/` e somente um validador local do `ResultV1` e do `data.model3d`. O frontend final e mantido em outro ambiente pelo responsavel da parte web.
+Toda a documentação oficial do projeto está em português:
 
-A documentação está separada por área do projeto:
+- [Índice geral da documentação](docs/README.md)
+- [Backend](docs/backend/00-indice.md)
+- [Frontend](docs/frontend/00-indice.md)
+- [Contrato da API](docs/backend/10-api.md)
+- [Deploy do backend](docs/backend/09-deploy.md)
+- [Deploy do frontend](docs/frontend/06-deploy-azure-app-service.md)
 
-```text
-docs/backend/
-docs/frontend/
-```
-
-A parte preenchida neste repositório é a documentação do backend. A pasta
-`docs/frontend/` fica reservada para a documentação do frontend, que será
-mantida pelo responsável dessa parte.
-
-Índice da documentação do backend:
-
-1. [Visão Geral](docs/backend/pt-br/01-visao-geral.md)
-   Contexto do projeto, objetivo acadêmico, ambientes conhecidos e estado atual.
-
-2. [Arquitetura](docs/backend/pt-br/02-arquitetura.md)
-   Fluxos de dados, separação entre frontend, backend, mock e worker DGX.
-
-3. [Criação da VM na Azure](docs/backend/pt-br/03-criacao-vm-azure.md)
-   Reservado para o guia de criação da VM.
-
-4. [Conexão via SSH](docs/backend/pt-br/04-conexao-ssh.md)
-   Acesso remoto à VM ou DGX por terminal.
-
-5. [GitHub, SSH e Deploy Key](docs/backend/pt-br/05-github-ssh-deploy-key.md)
-   Configuração de acesso ao repositório em ambientes sem interface gráfica.
-
-6. [Configuração do Ambiente](docs/backend/pt-br/06-configuracao-ambiente.md)
-   Variáveis de ambiente, dependências, perfis de execução e storage.
-
-7. [Execução sem Docker](docs/backend/pt-br/07-execucao-sem-docker.md)
-   Execução direta do backend, worker DGX e demo local.
-
-8. [Docker CPU](docs/backend/pt-br/08-docker.md)
-   Build e execução da imagem CPU/mock.
-
-9. [Deploy](docs/backend/pt-br/09-deploy.md)
-   Atualização do backend na Azure e conexão com DGX quando necessário.
-
-10. [Contrato da API](docs/backend/pt-br/10-api.md)
-    Endpoints, parâmetros, `ResultV1`, `pose3d`, `fitting`, `model3d` e exemplos.
-
-11. [DGX UFSC](docs/backend/pt-br/11-dgx-ufsc.md)
-    Execução da engine pesada na DGX com conda e `engine_dgx/`.
-
-12. [Segurança](docs/backend/pt-br/12-seguranca.md)
-    Cuidados com `.env`, chaves, dados de vídeo, CORS, portas e URLs temporárias.
-
-13. [Troubleshooting](docs/backend/pt-br/13-troubleshooting.md)
-    Problemas comuns e caminhos de diagnóstico.
-
-14. [Evidências do Sprint 2](docs/backend/pt-br/14-evidencias-sprint2.md)
-    Registro dos testes de Docker CPU, mock, API e contrato JSON.
-
-15. [Testes](docs/backend/pt-br/15-testes.md)
-    Tipos de teste e comandos de validação do projeto.
-
-16. [Decisoes de Inferencia DGX](docs/backend/pt-br/16-decisoes-inferencia-dgx.md)
-    Decisoes aprovadas sobre fila, DGX pull-based, cache JAX/Equinox e banco.
+O diagrama da apresentação do Sprint 3 pode ser adicionado depois nesta seção.

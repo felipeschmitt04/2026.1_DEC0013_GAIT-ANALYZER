@@ -32,7 +32,7 @@ CORS_ORIGINS=*
 
 ## Uploads
 
-`MAX_UPLOAD_MB` define o tamanho maximo aceito no endpoint `POST /analyze`. O valor padrao e 200 MB. Se o arquivo passar desse limite, a API retorna HTTP 413 antes de processar o video.
+`MAX_UPLOAD_MB` define o tamanho maximo aceito no endpoint `POST /analyze`. O valor padrao e 200 MB. Se o arquivo passar desse limite, a API retorna HTTP 413 antes de processar o vídeo.
 
 O backend aceita os formatos comuns `mp4`, `mov`, `avi` e `mkv`. Requisicoes com tipos claramente incompativeis retornam HTTP 415.
 

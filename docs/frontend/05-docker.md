@@ -14,7 +14,7 @@ O `Dockerfile` é a "receita de bolo" que ensina o sistema a empacotar o nosso f
 
 Para garantir que o nosso contêiner fosse o mais leve possível, ativamos a configuração de **Output Standalone** no `next.config.ts`.
 
-* **Como Funciona:** Tradicionalmente, projetos Node.js carregam a pasta `node_modules` inteira para produção (o que pode pesar gigabytes). O modo *standalone* faz com que o Next.js analise o código e extraia apenas os arquivos e pacotes estritamente necessários para o site rodar.
+* **Como Funciona:** Tradicionalmente, projetos Node.js carregam a pasta `node_modules` inteira para produção (o que pode pesar gigabytes). O modo *standalone* faz com que o Next.js análise o código e extraia apenas os arquivos e pacotes estritamente necessários para o site rodar.
 * **O Benefício:** O nosso `Dockerfile` copia apenas essa versão enxuta. O resultado é uma imagem final extremamente leve, o que torna o deploy (envio para a Azure) muito mais rápido e consome muito menos memória do servidor.
 
 ## Comandos de Build e Envio para a Nuvem (ACR)
@@ -24,11 +24,10 @@ Para empacotar a aplicação e enviá-la para o registro da Azure (Azure Contain
 **1. Construir a imagem localmente:**
 ```bash
 docker build -t edukwinter/gait-analyzer:latest .
-````
+```
 
 **2. Renomear (Tag) a imagem para o repositório da Azure:**
 
-Bash
 
 ```
 docker tag [seu usuário]/gait-analyzer:latest gaitanalyzer.azurecr.io/gait-analyzer:[o nome que quiser dar]
@@ -36,7 +35,6 @@ docker tag [seu usuário]/gait-analyzer:latest gaitanalyzer.azurecr.io/gait-anal
 
 **3. Enviar (Push) a imagem para a nuvem:**
 
-Bash
 
 ```
 docker push gaitanalyzer.azurecr.io/gait-analyzer:[igual o nome do passo 2]

@@ -13,7 +13,7 @@ Dessa forma, qualquer página do painel (`(dashboard)`) consegue olhar para o co
 A nossa nuvem gerencia três estados fundamentais para o funcionamento do sistema:
 
 * **pacienteAtivo:** Guarda o `id` e o `nome` do paciente que está recebendo atendimento no momento.
-* **analiseAtiva:** Guarda o identificador da análise da marcha que foi escolhida para ser inspecionada no histórico ou nos relatórios.
+* **análiseAtiva:** Guarda o identificador da análise da marcha que foi escolhida para ser inspecionada no histórico ou nos relatórios.
 * **jobIdAtivo:** Guarda o código único de rastreio (`job_id`) devolvido pelo backend de inteligência artificial. Ele é essencial para o frontend saber qual vídeo o supercomputador está processando naquele exato momento.
 
 Toda essa estrutura fica envelopada pelo `PacienteProvider` na raiz do sistema (no arquivo `layout.tsx`), distribuindo essas informações para todo o projeto.
@@ -33,4 +33,4 @@ Para blindar o sistema contra isso, criamos uma **regra automatizada** dentro da
 Para facilitar o uso dessa nuvem pelas telas, criamos um atalho customizado (um hook) chamado `usePaciente()`. Com apenas uma linha de código, qualquer componente consegue interagir com a memória global:
 
 * **Na Tela de Nova Análise:** O frontend usa a função `setJobIdAtivo` para guardar o código de rastreio assim que o backend aceita o vídeo.
-* **Nas Telas de Consulta (Gráficos/3D):** O código lê o `jobIdAtivo` ou a `analiseAtiva` para buscar os dados certos no banco de dados e montar os relatórios de forma totalmente dinâmica.
+* **Nas Telas de Consulta (Gráficos/3D):** O código lê o `jobIdAtivo` ou a `análiseAtiva` para buscar os dados certos no banco de dados e montar os relatórios de forma totalmente dinâmica.

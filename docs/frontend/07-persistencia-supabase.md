@@ -13,7 +13,7 @@ O ponto mais elegante dessa integração acontece no momento em que um novo víd
 
 1. **O Retorno da IA:** Assim que o frontend envia o vídeo, o backend de IA aceita o arquivo e devolve um código único de rastreio daquela tarefa: o `job_id`.
 2. **A Criação do Registro Local:** Em vez de o frontend gerar um número aleatório qualquer para salvar a análise no nosso banco de dados, o código intercepta esse `job_id` da IA e o utiliza diretamente como a **Chave Primária (`id`)** da tabela no Supabase.
-3. **O Vínculo Perfeito:** Ao salvar o registro no banco com o comando `db.analise.create({ data: { id: jobId, ... } })`, amarramos o ID do histórico local com o id do job da nuvem.
+3. **O Vínculo Perfeito:** Ao salvar o registro no banco com o comando `db.análise.create({ data: { id: jobId, ... } })`, amarramos o ID do histórico local com o id do job da nuvem.
 4. **O Resultado Prático:** O ID do exame no banco e o ID do processo na IA passam a ser **o mesmo número**. Isso elimina a necessidade de criar tabelas complexas de tradução e garante que, quando o médico clicar para ver os gráficos, o frontend saiba exatamente qual resultado buscar usando um único identificador.
 
 ## Vantagens dessa Arquitetura

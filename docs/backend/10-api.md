@@ -1,12 +1,12 @@
 # Contrato da API para Frontend
 
 Este contrato define a versao V1 da API que o frontend deve consumir para
-upload de video, acompanhamento do job, visualizacao 3D, graficos e relatorio.
+upload de vídeo, acompanhamento do job, visualização 3D, gráficos e relatório.
 
 O frontend deve considerar `data.model3d`, quando presente, como a fonte
-principal para visualizacao 3D fiel do modelo MuJoCo. `data.fitting` continua
-sendo a fonte principal para graficos biomecanicos, analises de coordenadas e
-fallback visual. `data.pose3d` existe como representacao simples por pontos e
+principal para visualização 3D fiel do modelo MuJoCo. `data.fitting` continua
+sendo a fonte principal para gráficos biomecânicos, análises de coordenadas e
+fallback visual. `data.pose3d` existe como representação simples por pontos e
 linhas, util para depuracao, fallback visual ou preview de esqueleto.
 
 ## URL Base
@@ -17,13 +17,13 @@ Em desenvolvimento local:
 http://localhost:8000
 ```
 
-Na Azure/producao, trocar apenas a URL base. Os caminhos dos endpoints devem
+Na Azure/produção, trocar apenas a URL base. Os caminhos dos endpoints devem
 continuar iguais.
 
 ## Fluxo Recomendado
 
 ```text
-1. Frontend envia video + altura para POST /analyze
+1. Frontend envia vídeo + altura para POST /analyze
 2. Em modo mock/local/remoto direto, backend processa e retorna `ResultV1` final
 3. Em modo fila, backend retorna `ResultV1` com `job.status=queued`
 4. Frontend guarda job.job_id
@@ -41,7 +41,7 @@ busca o trabalho pelos endpoints internos `/worker/*`.
 
 ### GET /health
 
-Verifica se a API esta online.
+Verifica se a API está online.
 
 Resposta `200`:
 
@@ -53,7 +53,7 @@ Resposta `200`:
 
 ### POST /analyze
 
-Envia um video para analise.
+Envia um vídeo para análise.
 
 Content-Type:
 
@@ -63,21 +63,21 @@ multipart/form-data
 
 Campos:
 
-| Campo | Tipo | Obrigatorio | Descricao |
+| Campo | Tipo | Obrigatório | Descrição |
 | --- | --- | --- | --- |
-| `video` | arquivo | sim | Video da marcha, preferencialmente `.mp4`. |
+| `video` | arquivo | sim | Vídeo da marcha, preferencialmente `.mp4`. |
 | `height_mm` | inteiro | sim | Altura do paciente em milimetros. Exemplo: `1750`. |
-| `rotated` | booleano | nao | Padrao `false`. Use `true` apenas quando o video precisar ser transposto para a pessoa ser detectada corretamente. |
+| `rotated` | booleano | não | Padrao `false`. Use `true` apenas quando o vídeo precisar ser transposto para a pessoa ser detectada corretamente. |
 
 Regras:
 
 - `height_mm` deve ser maior que zero.
 - O tamanho maximo do upload e configurado por `MAX_UPLOAD_MB`; acima disso a API retorna HTTP 413.
 - Formatos claramente incompativeis retornam HTTP 415.
-- O video precisa abrir no OpenCV.
+- O vídeo precisa abrir no OpenCV.
 - Videos com FPS baixo, baixa resolucao ou duracao curta podem gerar warnings,
   mas ainda podem ser processados.
-- Video vertical (`height > width`) nao significa necessariamente `rotated=true`;
+- Vídeo vertical (`height > width`) não significa necessariamente `rotated=true`;
   a decisao de rotacao deve ser explicita.
 
 Exemplo com `curl`:
@@ -94,7 +94,7 @@ Resposta `200`: objeto `ResultV1`.
 
 ### GET /jobs
 
-Lista jobs conhecidos pelo backend a partir do filesystem local (`storage/results`, `storage/uploads` e `storage/jobs`). Este endpoint nao usa banco de dados e serve para auditoria local, debug e validacao de demo.
+Lista jobs conhecidos pelo backend a partir do filesystem local (`storage/results`, `storage/uploads` e `storage/jobs`). Este endpoint não usa banco de dados e serve para auditoria local, debug e validacao de demo.
 
 Resposta `200`:
 
@@ -134,29 +134,29 @@ Resposta quando concluido:
 }
 ```
 
-Possiveis `status`:
+Possíveis `status`:
 
 | Status | Significado |
 | --- | --- |
 | `queued` | Job salvo aguardando worker. |
 | `claimed` | Worker assumiu o job. |
-| `running` | Worker/pipeline em execucao. |
-| `processing` | Video validado e pipeline em execucao. |
-| `completed` | Resultado final disponivel. |
+| `running` | Worker/pipeline em execução. |
+| `processing` | Vídeo validado e pipeline em execução. |
+| `completed` | Resultado final disponível. |
 | `failed_retryable` | Falha reportada pelo worker, mas tentativa futura ainda e aceitavel. |
 | `failed` | Falha de validacao ou processamento. |
 
-Possiveis `stage` atuais:
+Possíveis `stage` atuais:
 
 | Stage | Significado |
 | --- | --- |
 | `waiting_worker` | Job em fila aguardando DGX. |
 | `claimed` | Job assumido por worker. |
-| `processing` | Worker processando o video. |
-| `ingest` | Recepcao/validacao inicial do video. |
+| `processing` | Worker processando o vídeo. |
+| `ingest` | Recepcao/validacao inicial do vídeo. |
 | `fase_1` | Processamento principal da engine. |
 | `finished` | Resultado final salvo. |
-| `unknown` | Upload existe, mas o resultado ainda nao foi salvo. |
+| `unknown` | Upload existe, mas o resultado ainda não foi salvo. |
 
 ### GET /results/{job_id}
 
@@ -165,30 +165,30 @@ Retorna novamente o JSON salvo para o job.
 Uso recomendado:
 
 - recarregar pagina;
-- abrir relatorio salvo;
+- abrir relatório salvo;
 - compartilhar resultado dentro do frontend;
-- evitar reenviar o video se o job ja foi processado.
+- evitar reenviar o vídeo se o job ja foi processado.
 
 ### GET /results/{job_id}/report.pdf
 
-Gera sob demanda e retorna o relatorio clinico em PDF da analise concluida.
+Gera sob demanda e retorna o relatório clínico em PDF da análise concluída.
 
 O PDF usa `input_summary`, `quality_info` e `data.metricas_clinicas` para montar:
 
-- resumo da analise;
+- resumo da análise;
 - tabela comparativa entre lado direito e esquerdo;
-- graficos de joelho e quadril direito vs esquerdo;
-- grafico de distancia entre tornozelos;
-- observacoes automaticas conservadoras.
+- gráficos de joelho e quadril direito vs esquerdo;
+- gráfico de distância entre tornozelos;
+- observações automáticas conservadoras.
 
-Possiveis respostas:
+Possíveis respostas:
 
 | Status | Significado |
 | --- | --- |
 | `200` | PDF gerado/retornado com sucesso. |
-| `404` | O `job_id` nao possui `result.json`. |
-| `409` | A analise ainda nao foi concluida ou nao possui dados biomecanicos. |
-| `500` | Dependencias de relatorio indisponiveis no ambiente. |
+| `404` | O `job_id` não possui `result.json`. |
+| `409` | A análise ainda não foi concluída ou não possui dados biomecânicos. |
+| `500` | Dependências de relatório indisponíveis no ambiente. |
 
 ### GET /results/{job_id}/artifacts/{filename}
 
@@ -196,18 +196,18 @@ Retorna artefatos gerados pelo processamento quando existirem.
 
 Nomes aceitos:
 
-| Arquivo | Descricao |
+| Arquivo | Descrição |
 | --- | --- |
-| `movimento_exportado.npz` | Exportacao dos dados de movimento/fitting. |
-| `3d_rebuild.mp4` | Video renderizado 3D, se existir no futuro. |
-| `relatorio_analise_marcha.pdf` | Relatorio clinico gerado pelo backend. |
+| `movimento_exportado.npz` | Exportação dos dados de movimento/fitting. |
+| `3d_rebuild.mp4` | Vídeo renderizado 3D, se existir no futuro. |
+| `relatorio_analise_marcha.pdf` | Relatório clínico gerado pelo backend. |
 
-Observacao: a visualizacao web nao deve depender de `3d_rebuild.mp4`. O caminho
-principal e usar `data.fitting` para animar o modelo 3D interativo no navegador.
+Observação: a visualização web não deve depender de `3d_rebuild.mp4`. O caminho
+principal é usar `data.fitting` para animar o modelo 3D interativo no navegador.
 
 ## Endpoints Internos Do Worker DGX
 
-Estes endpoints nao sao para o frontend. Eles existem para o fluxo pull-based em
+Estes endpoints não são para o frontend. Eles existem para o fluxo pull-based em
 que a DGX consulta a API central e processa jobs sem ser exposta publicamente.
 Quando `WORKER_TOKEN` estiver configurado, todas as chamadas devem enviar o
 header `X-Worker-Token`.
@@ -256,7 +256,7 @@ Estrutura geral:
 
 ### error
 
-Quando nao ha erro:
+Quando não ha erro:
 
 ```json
 null
@@ -267,7 +267,7 @@ Quando ha erro:
 ```json
 {
   "code": "ERROR_VIDEO_INVALID",
-  "message": "O video enviado nao pode ser aberto ou nao atende aos requisitos basicos",
+  "message": "O vídeo enviado não pode ser aberto ou não atende aos requisitos básicos",
   "stage": "ingest",
   "details": "string opcional",
   "retryable": false
@@ -278,18 +278,18 @@ Codigos conhecidos:
 
 | Codigo | Significado |
 | --- | --- |
-| `ERROR_104_PATH` | Arquivo nao encontrado no backend. |
-| `ERROR_103_VIDEO_OPEN` | OpenCV nao conseguiu abrir o video. |
+| `ERROR_104_PATH` | Arquivo não encontrado no backend. |
+| `ERROR_103_VIDEO_OPEN` | OpenCV não conseguiu abrir o vídeo. |
 | `ERROR_101_FPS_INVALID` | FPS invalido ou zero. |
 | `ERROR_102_VIDEO_DURATION` | Duracao invalida ou zero. |
-| `ERROR_VIDEO_INVALID` | Video falhou nos requisitos basicos. |
+| `ERROR_VIDEO_INVALID` | Vídeo falhou nos requisitos básicos. |
 | `ERROR_PIPELINE_FAILED` | Falha inesperada durante processamento local ou remoto. |
 
 ### input_summary
 
 ```json
 {
-  "video_path": "storage/uploads/{job_id}/input.mp4",
+  "vídeo_path": "storage/uploads/{job_id}/input.mp4",
   "height_mm": 1750,
   "rotated": false,
   "window_L": 150,
@@ -300,7 +300,7 @@ Codigos conhecidos:
 
 Uso no frontend:
 
-- exibir dados do video no relatorio;
+- exibir dados do vídeo no relatório;
 - sincronizar timeline;
 - mostrar avisos contextuais.
 
@@ -319,10 +319,10 @@ Warnings conhecidos:
 | Warning | Significado |
 | --- | --- |
 | `WARNING_101_LOW_FPS` | FPS menor que 30. |
-| `WARNING_102_VIDEO_SHORT` | Video com menos de 2 segundos. |
+| `WARNING_102_VIDEO_SHORT` | Vídeo com menos de 2 segundos. |
 | `WARNING_103_LOW_RES` | Resolucao menor que 400 px em algum eixo. |
 
-O frontend deve mostrar warnings de forma nao bloqueante.
+O frontend deve mostrar warnings de forma não bloqueante.
 
 ## data
 
@@ -336,7 +336,7 @@ O frontend deve mostrar warnings de forma nao bloqueante.
   "model3d": null,
   "metricas_clinicas": {},
   "artifacts": null,
-  "video_3d": null
+  "vídeo_3d": null
 }
 ```
 
@@ -345,8 +345,8 @@ Prioridade de uso no frontend:
 | Uso | Campo principal | Campo alternativo |
 | --- | --- | --- |
 | Modelo 3D preciso/interativo | `data.model3d` | `data.fitting` |
-| Graficos biomecanicos | `data.fitting`, `data.metricas_clinicas` | `data.kinematics` |
-| Relatorio clinico | `data.metricas_clinicas`, `input_summary`, `quality_info` | `data.fitting` |
+| Gráficos biomecânicos | `data.fitting`, `data.metricas_clinicas` | `data.kinematics` |
+| Relatório clínico | `data.metricas_clinicas`, `input_summary`, `quality_info` | `data.fitting` |
 | Preview simples de esqueleto | `data.pose3d`, `data.skeleton` | nenhum |
 
 ## data.model3d
@@ -392,9 +392,9 @@ Campos principais:
 | `bodies` | Corpos do modelo MuJoCo, com `parent_id` para hierarquia. |
 | `geoms` | Geometrias renderizaveis do modelo: esfera, capsula, cilindro, caixa, elipsoide ou mesh. |
 | `meshes` | Vertices e faces quando alguma geometria usa tipo `mesh`. |
-| `sites` | Pontos auxiliares do modelo, uteis para debug e validacao. |
-| `frames[].geom_xpos` | Posicao global de cada geometria por frame, quando disponivel. |
-| `frames[].geom_xmat` | Matriz de rotacao global 3x3 de cada geometria por frame, quando disponivel. |
+| `sites` | Pontos auxiliares do modelo, úteis para debug e validacao. |
+| `frames[].geom_xpos` | Posicao global de cada geometria por frame, quando disponível. |
+| `frames[].geom_xmat` | Matriz de rotacao global 3x3 de cada geometria por frame, quando disponível. |
 | `frames[].body_xpos` | Posicao global dos corpos do modelo por frame. |
 | `frames[].site_xpos` | Posicao global dos sites auxiliares do modelo por frame. |
 
@@ -403,21 +403,21 @@ Regra:
 - Se `data.model3d` existir, o frontend deve preferir esse bloco para o avatar
   principal.
 - Se `data.model3d` vier `null`, usar `data.fitting` como fallback visual.
-- `data.fitting.angles` continua sendo a fonte correta para graficos e series
+- `data.fitting.angles` continua sendo a fonte correta para gráficos e series
   biomecanicas.
 
 Representacoes conhecidas:
 
 | Representacao | Significado |
 | --- | --- |
-| `mujoco_geoms` | Exportacao mais completa, com geometrias renderizaveis e transforms por frame. |
-| `mujoco_geoms_from_qpos` | Exportacao completa recomputada com `mujoco.mj_forward` a partir de `state.qpos`, quando o wrapper nao expoe `geom_xpos` diretamente. |
-| `forward_kinematics_points` | Exportacao por pontos reais de forward kinematics (`body_xpos` e `site_xpos`) quando as geometrias MuJoCo nao estao expostas pelo wrapper. |
+| `mujoco_geoms` | Exportação mais completa, com geometrias renderizaveis e transforms por frame. |
+| `mujoco_geoms_from_qpos` | Exportação completa recomputada com `mujoco.mj_forward` a partir de `state.qpos`, quando o wrapper não expõe `geom_xpos` diretamente. |
+| `forward_kinematics_points` | Exportação por pontos reais de forward kinematics (`body_xpos` e `site_xpos`) quando as geometrias MuJoCo não estão expostas pelo wrapper. |
 
 ## data.fitting
 
-Este e o bloco principal para graficos biomecanicos, coordenadas articulares e
-fallback visual quando `data.model3d` nao estiver disponivel.
+Este e o bloco principal para gráficos biomecânicos, coordenadas articulares e
+fallback visual quando `data.model3d` não estiver disponível.
 
 ```json
 {
@@ -528,7 +528,7 @@ Cada item de `coordinates` detalha uma coordenada:
 O frontend pode usar esse metadado para:
 
 - validar se recebeu 40 colunas;
-- nomear graficos;
+- nomear gráficos;
 - montar legendas;
 - mapear coordenadas para controles do modelo 3D;
 - converter radianos para graus na interface.
@@ -550,7 +550,7 @@ Exemplo abreviado:
 ]
 ```
 
-Para graficos:
+Para gráficos:
 
 ```js
 const i = result.data.fitting.coordinate_names.indexOf("knee_angle_r");
@@ -565,7 +565,7 @@ const degrees = radians * 180 / Math.PI;
 
 ## data.pose3d e data.skeleton
 
-`pose3d` e uma representacao por keypoints 3D:
+`pose3d` é uma representação por keypoints 3D:
 
 ```text
 data.pose3d[frame][joint] = [x, y, z]
@@ -630,14 +630,14 @@ Series temporais calculadas a partir da pose 3D:
 
 Uso no frontend:
 
-- graficos clinicos;
+- gráficos clínicos;
 - cards resumidos;
-- relatorio;
+- relatório;
 - comparacao entre lados direito/esquerdo.
 
-Observacao: mesmo quando o avatar principal usar `data.model3d`, essas metricas
-podem ser exibidas diretamente no relatorio porque ja estao em unidades
-clinicas amigaveis.
+Observação: mesmo quando o avatar principal usar `data.model3d`, essas metricas
+podem ser exibidas diretamente no relatório porque já estão em unidades
+clinicas amigáveis.
 
 ## data.kinematics
 
@@ -666,7 +666,7 @@ array temporal
 Uso recomendado agora:
 
 - manter salvo para evolucao;
-- nao depender desse campo para a primeira versao visual do frontend sem uma
+- não depender desse campo para a primeira versao visual do frontend sem uma
   validacao conjunta do significado de cada coluna.
 
 ## Exemplo de Fetch no Frontend
@@ -674,7 +674,7 @@ Uso recomendado agora:
 ```js
 async function analyzeVideo(file, heightMm) {
   const formData = new FormData();
-  formData.append("video", file);
+  formData.append("vídeo", file);
   formData.append("height_mm", String(heightMm));
 
   const response = await fetch("http://localhost:8000/analyze", {
@@ -683,7 +683,7 @@ async function analyzeVideo(file, heightMm) {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha na analise: HTTP ${response.status}`);
+    throw new Error(`Falha na análise: HTTP ${response.status}`);
   }
 
   const result = await response.json();
@@ -736,31 +736,31 @@ O frontend pode depender destes campos na V1:
 - `data.skeleton`
 - `data.metricas_clinicas`
 
-## Decisoes para o Frontend
+## Decisões para o Frontend
 
 - Modelo 3D interativo: usar `data.model3d` quando existir.
 - Fallback de modelo 3D: usar `data.fitting`.
-- Graficos biomecanicos detalhados: usar `data.fitting`.
-- Graficos clinicos simples: usar `data.metricas_clinicas`.
+- Gráficos biomecânicos detalhados: usar `data.fitting`.
+- Gráficos clínicos simples: usar `data.metricas_clinicas`.
 - Relatorio: combinar `input_summary`, `quality_info`,
   `data.metricas_clinicas` e series selecionadas de `data.fitting`.
 - Esqueleto simples/fallback: usar `data.pose3d` e `data.skeleton`.
-- Nao depender de video renderizado no backend para a primeira integracao.
+- Não depender de vídeo renderizado no backend para a primeira integração.
 
 ## Observacoes sobre Mock
 
 Em `USE_MOCK_ENGINE=true`, a API retorna o mesmo contrato estrutural, mas os
-valores de `pose3d` e `fitting.angles` sao simulados.
+valores de `pose3d` e `fitting.angles` são simulados.
 
 Isso serve para o frontend desenvolver:
 
 - upload;
 - loading;
 - tela de resultado;
-- graficos;
+- gráficos;
 - timeline;
 - modelo 3D;
-- relatorio.
+- relatório.
 
 Quando `USE_MOCK_ENGINE=false` estiver rodando em ambiente completo, o mesmo
-contrato sera preenchido com a saida real da engine.
+contrato será preenchido com a saida real da engine.

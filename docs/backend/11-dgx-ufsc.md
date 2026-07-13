@@ -26,7 +26,7 @@ Principais arquivos:
 
 - `main.py`: API FastAPI do worker para teste direto/debug;
 - `pull_worker.py`: worker que consulta a API central e processa jobs;
-- `worker_engine.py`: singleton que carrega a engine uma vez;
+- `worker_engine.py`: singleton que carrega a enginé uma vez;
 - `gait_engine.py`: MeTRAbs, GaitTransformer, fitting e exportação;
 - `fitting.py`: ajuste JAX/Equinox/Optax;
 - `model3d_export.py`: monta `raw_data.model3d`;
@@ -34,7 +34,7 @@ Principais arquivos:
 
 ## Subir O Worker Para Teste Direto
 
-Na DGX, este modo sobe uma API local do worker. Ele e util para debug ou teste
+Na DGX, este modo sobé uma API local do worker. Ele é útil para debug ou teste
 controlado:
 
 ```bash
@@ -77,18 +77,18 @@ export WORKER_ID=dgx-h100-ufsc
 python pull_worker.py
 ```
 
-O worker faz polling em `/worker/jobs/next`, baixa o video, executa a engine com
+O worker faz polling em `/worker/jobs/next`, baixa o vídeo, executa a engine com
 lock de um job por vez e envia o resultado de volta para `/worker/jobs/{job_id}/result`.
 
 A limpeza de caches JAX/Equinox antes e depois de cada job deve ser mantida. Ela
-foi adicionada porque, no ambiente real, processar videos diferentes em sequencia
+foi adicionada porque, no ambiente real, processar vídeos diferentes em sequencia
 sem essa limpeza gerou erro.
 
 
 ## Processar Um Vídeo Diretamente No Worker
 
 ```bash
-curl -F video=@/caminho/video.mp4 \
+curl -F video=@/caminho/vídeo.mp4 \
   -F height_mm=1750 \
   -F rotated=false \
   http://localhost:9000/process \

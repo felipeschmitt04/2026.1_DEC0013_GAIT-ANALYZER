@@ -127,13 +127,13 @@ python -m pytest tests
 
 ## CI No GitHub Actions
 
-CI significa integracao continua. Neste repositorio, isso quer dizer que o GitHub roda automaticamente uma checagem leve quando ha push ou pull request para `main`:
+CI significa integração continua. Neste repositório, isso quer dizer que o GitHub roda automaticamenté uma checagem leve quando ha push ou pull request para `main`:
 
 ```text
 instalar requirements.api.txt -> compileall -> pytest
 ```
 
-Isso nao faz deploy. O objetivo e avisar cedo se alguem quebrou import, sintaxe, contrato basico ou testes leves.
+Isso não faz deploy. O objetivo e avisar cedo se alguem quebrou import, sintaxe, contrato basico ou testes leves.
 
 ## Boa Prática
 

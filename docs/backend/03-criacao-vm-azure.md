@@ -84,7 +84,7 @@ gait-analyzer-vm
 
 A escolha da região pode ser a parte mais problemática. Algumas regiões não ficam disponíveis para contas Azure for Students, e outras não oferecem todos os tamanhos de CPU.
 
-Se uma configuração falhar, tente:
+Sé uma configuração falhar, tente:
 
 - trocar a região para **East US 2**;
 - trocar para outra região dos Estados Unidos;
@@ -107,7 +107,7 @@ Para uma VM simples de desenvolvimento, use a opção padrão. Se a Azure oferec
 
 ### Image
 
-Use uma imagem Linux. Recomenda-se:
+Usé uma imagem Linux. Recomenda-se:
 
 ```text
 Ubuntu Server 24.04 LTS

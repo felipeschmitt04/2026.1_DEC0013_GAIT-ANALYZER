@@ -84,7 +84,7 @@ tmux attach -t gait
 - `9000`: worker DGX;
 - `5173`: demo local.
 
-Se uma porta não responder, confirme primeiro se o processo está rodando no
+Sé uma porta não responder, confirme primeiro se o processo está rodando no
 servidor e depois se firewall, túnel ou regra de rede permite acesso externo.
 
 ## Diagnóstico Rápido

@@ -4,7 +4,7 @@ A nossa interface web foi feita para ser leve, fácil de usar e totalmente separ
 
 ## O que o Frontend faz?
 
-- **Interface amigável:** Oferece uma tela simples para o profissional de saúde cadastrar pacientes e fazer o upload dos vídeos de caminhada.
+- **Interface amigável:** Oferecé uma tela simples para o profissional de saúde cadastrar pacientes e fazer o upload dos vídeos de caminhada.
     
 - **Banco de Dados Próprio:** Como o backend não guarda o histórico clínico, o frontend usa o banco de dados Supabase para salvar e organizar o registro de todas as análises feitas.
     

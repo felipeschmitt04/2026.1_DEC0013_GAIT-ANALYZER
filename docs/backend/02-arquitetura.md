@@ -2,7 +2,7 @@
 
 A arquitetura atual separa tres responsabilidades:
 
-- frontend web: interface, upload, visualizacao 3D, graficos e relatorio;
+- frontend web: interface, upload, visualização 3D, gráficos e relatório;
 - backend FastAPI: contrato HTTP, validacao, storage, fila e montagem do `ResultV1`;
 - engine: processamento mock, local pesado, remoto direto ou worker DGX pull-based.
 
@@ -27,7 +27,7 @@ Frontend
   -> ResultV1
 ```
 
-Esse e o fluxo recomendado para integracao inicial. Ele valida upload, storage,
+Esse e o fluxo recomendado para integração inicial. Ele valida upload, storage,
 contrato JSON e consumo pelo frontend sem depender de GPU ou modelos externos.
 
 ## Fluxo Com DGX Pull-Based
@@ -37,20 +37,20 @@ Frontend
   -> Backend FastAPI na Azure
   -> storage/jobs/{job_id}/job.json
   -> DGX Pull Worker consulta /worker/jobs/next
-  -> DGX baixa o video, processa e envia raw_data
+  -> DGX baixa o vídeo, processa e envia raw_data
   -> Backend monta ResultV1
   -> Frontend consulta /status ou /results
 ```
 
-Esse e o desenho preferido para a apresentacao: a DGX olha para a API central e
-busca trabalho quando estiver disponivel. Assim a Azure nao precisa abrir
-conexao para dentro da rede da DGX, e a DGX nao precisa ficar exposta ao
+Esse e o desenho preferido para a apresentação: a DGX olha para a API central e
+busca trabalho quando estiver disponível. Assim a Azure não precisa abrir
+conexão para dentro da rede da DGX, e a DGX não precisa ficar exposta ao
 frontend.
 
 O modo `ENGINE_MODE=remote`, em que o backend chama diretamente o worker DGX,
 continua existindo como alternativa de debug ou ambiente controlado. Na DGX, o
 worker roda por conda. O caminho Docker GPU foi abandonado para esse ambiente
-porque o aluno nao possui Docker disponivel na DGX.
+porque o aluno não possui Docker disponível na DGX.
 
 ## Organizacao Do Backend
 
@@ -76,7 +76,7 @@ sincronos:
 - `ENGINE_MODE=local`: `GaitAnalysisEngine`;
 - `ENGINE_MODE=remote`: `RemoteDgxEngine`.
 
-O modo `ENGINE_MODE=queue` e tratado pelo endpoint `POST /analyze`: ele salva o
+O modo `ENGINE_MODE=queue` é tratado pelo endpoint `POST /analyze`: ele salva o
 upload, cria o estado em `storage/jobs` e deixa a DGX buscar o trabalho.
 
 ## Organizacao Da DGX
@@ -89,7 +89,7 @@ engine_dgx/
 |-- gait_engine.py       # MeTRAbs, GaitTransformer e fitting
 |-- fitting.py           # Ajuste do modelo
 |-- model3d_export.py    # Exporta geometrias MuJoCo para o frontend
-`-- requirements.txt     # Dependencias do ambiente DGX
+`-- requirements.txt     # Dependências do ambiente DGX
 ```
 
 Essa pasta e independente do Docker do backend. Ela existe para ser copiada ou
@@ -97,7 +97,7 @@ atualizada na DGX e executada dentro do ambiente conda preparado.
 
 ## Dados Para O Frontend
 
-O backend retorna `ResultV1`. Dentro de `data`, os blocos mais importantes sao:
+O backend retorna `ResultV1`. Dentro de `data`, os blocos mais importantes são:
 
 - `model3d`: geometrias e frames exportados do MuJoCo, quando a DGX gera esse
   bloco;
@@ -109,13 +109,13 @@ O backend retorna `ResultV1`. Dentro de `data`, os blocos mais importantes sao:
 
 O contrato detalhado fica em [10-api.md](10-api.md).
 
-## Decisoes Mantidas
+## Decisões Mantidas
 
 - O frontend conversa somente com a API.
 - A API funciona em modo mock.
-- A Azure atual e CPU e nao deve ser tratada como ambiente de GPU.
-- A DGX roda a engine pesada por conda, nao por Docker.
-- Nao introduzir banco de dados para inferencia agora; a fila usa arquivos em
+- A Azure atual e CPU e não deve ser tratada como ambiente de GPU.
+- A DGX roda a engine pesada por conda, não por Docker.
+- Não introduzir banco de dados para inferencia agora; a fila usa arquivos em
   `storage/jobs`.
 - O banco do frontend/cadastros fica separado e e responsabilidade da parte web.
 - O backend entrega dados para o frontend renderizar no navegador.

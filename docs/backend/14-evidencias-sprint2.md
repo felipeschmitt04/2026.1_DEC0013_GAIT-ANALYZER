@@ -3,12 +3,12 @@
 Data da validacao: 2026-06-18  
 Ambiente: Acer Nitro 5, WSL2 Ubuntu 24.04, Docker Desktop  
 Imagem Docker validada: `gait-analyzer-backend:cpu`  
-Modo de execucao: `USE_MOCK_ENGINE=true`
+Modo de execução: `USE_MOCK_ENGINE=true`
 
 Este documento registra os comandos executados, os resultados observados e o
 significado tecnico de cada validacao. O objetivo e servir como base para a
-apresentacao do Sprint 2 e como evidencia de que as partes principais do backend
-funcionam isoladamente antes da integracao final.
+apresentação do Sprint 2 e como evidencia de que as partes principais do backend
+funcionam isoladamente antes da integração final.
 
 ## Objetivo Do Sprint 2
 
@@ -16,22 +16,22 @@ Validar que o backend FastAPI consegue:
 
 - subir em Docker CPU;
 - operar em modo mock sem depender de GPU ou modelos pesados;
-- receber um video via `POST /analyze`;
+- receber um vídeo via `POST /analyze`;
 - criar um `job_id`;
 - salvar o resultado em storage;
 - expor o status e o resultado por HTTP;
-- entregar um JSON com dados suficientes para o frontend iniciar a integracao.
+- entregar um JSON com dados suficientes para o frontend iniciar a integração.
 
 ## Contexto Da Arquitetura Validada
 
 Fluxo validado:
 
 ```text
-Video local -> Backend FastAPI em Docker CPU -> MockGaitAnalysisEngine -> ResultV1 JSON
+Vídeo local -> Backend FastAPI em Docker CPU -> MockGaitAnalysisEngine -> ResultV1 JSON
 ```
 
 Neste Sprint, a validacao usa `MockGaitAnalysisEngine`. Isso e intencional:
-permite testar API, storage, contrato JSON, Docker e integracao com frontend sem
+permite testar API, storage, contrato JSON, Docker e integração com frontend sem
 depender de MeTRAbs, GaitTransformer, JAX, MuJoCo, TensorFlow Hub ou GPU.
 
 ## 1. Verificacao Do Estado Do Docker
@@ -86,7 +86,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 Interpretacao:
 
 O backend sobe em modo mock automaticamente dentro do container, o que e adequado
-para Azure CPU e integracao inicial com frontend.
+para Azure CPU e integração inicial com frontend.
 
 ## 3. Testes Automatizados Leves
 
@@ -112,12 +112,12 @@ Testes cobertos:
 
 - distancia entre pontos iguais;
 - distancia entre `[0, 0, 0]` e `[3, 4, 0]`;
-- angulo clinico de uma linha reta;
-- angulo clinico de 90 graus.
+- ângulo clínico de uma linha reta;
+- ângulo clínico de 90 graus.
 
 Limite desta validacao:
 
-Esses testes nao validam a engine pesada nem a biomecanica completa. Eles apenas
+Esses testes não validam a engine pesada nem a biomecanica completa. Eles apenas
 garantem que funcoes deterministicas e simples continuam corretas.
 
 ## 4. Subida Da API Em Docker
@@ -161,11 +161,11 @@ HTTP/1.1 200 OK
 
 Significado:
 
-- confirma que a API FastAPI esta online;
+- confirma que a API FastAPI está online;
 - valida que o container esta aceitando requisicoes HTTP;
-- nao valida ainda o pipeline de analise, apenas a saude basica do servico.
+- não valida ainda o pipeline de análise, apenas a saude basica do servico.
 
-## 6. Envio De Video Para Analise
+## 6. Envio De Vídeo Para Análise
 
 Comando:
 
@@ -202,13 +202,13 @@ warnings: []
 
 Significado:
 
-- o endpoint `POST /analyze` recebeu o video `misc/meu_video.mp4`;
+- o endpoint `POST /analyze` recebeu o vídeo `misc/meu_video.mp4`;
 - o backend criou um `job_id`;
 - o arquivo foi salvo no storage interno do container;
 - o pipeline foi executado em modo mock;
 - o job terminou com `status = completed`;
 - o JSON retornado contem dados suficientes para o frontend iniciar a
-  visualizacao e os graficos.
+  visualização e os gráficos.
 
 ## 7. Recuperacao Do Resultado Salvo
 
@@ -238,7 +238,7 @@ Significado:
 - confirma que o resultado foi persistido;
 - confirma que `GET /results/{job_id}` consegue recuperar o JSON salvo;
 - valida o fluxo esperado para recarregar resultados no frontend sem reenviar o
-  video.
+  vídeo.
 
 ## 8. Campos Do JSON Relevantes Para O Frontend
 
@@ -266,10 +266,10 @@ Interpretacao:
 
 - `data.pose3d` pode ser usado para preview visual com esqueleto simples;
 - `data.skeleton` informa nomes das juntas e conexoes;
-- `data.fitting` e o bloco principal para graficos biomecanicos e futura
+- `data.fitting` e o bloco principal para gráficos biomecânicos e futura
   animacao de modelo 3D;
 - `data.metricas_clinicas` fornece series ja calculadas em unidades mais
-  amigaveis para relatorio.
+  amigáveis para relatório.
 
 ## 9. Conclusao Da Validacao
 
@@ -277,26 +277,26 @@ A validacao confirma que o backend esta apto para o Sprint 2 no escopo proposto:
 
 - API sobe em Docker CPU;
 - modo mock funciona;
-- upload de video funciona;
+- upload de vídeo funciona;
 - pipeline retorna `ResultV1`;
 - resultado e salvo e recuperado por `job_id`;
-- contrato JSON esta suficientemente estavel para integracao inicial com o
+- contrato JSON esta suficientemente estavel para integração inicial com o
   frontend.
 
 ## 10. Limitacoes Conhecidas
 
-- A validacao usa `MockGaitAnalysisEngine`, nao a engine real.
+- A validacao usa `MockGaitAnalysisEngine`, não a engine real.
 - A engine real com MeTRAbs, GaitTransformer, JAX e MuJoCo depende de ambiente
   com dependencias pesadas e/ou GPU.
-- A Azure atual e CPU, portanto nao deve ser tratada como ambiente de
+- A Azure atual e CPU, portanto não deve ser tratada como ambiente de
   processamento pesado.
-- A visualizacao 3D final sera implementada no frontend.
+- A visualização 3D final será implementada no frontend.
 - O backend ainda processa de forma sincrona; fila/worker fica para evolucao
   futura.
 
 ## 11. Proximos Passos Sugeridos
 
-Para integracao com frontend:
+Para integração com frontend:
 
 - publicar o backend na VM Azure;
 - configurar `CORS_ORIGINS` com a URL do frontend do Eduardo;
@@ -309,9 +309,9 @@ Para Sprint 3:
 - estudar worker remoto para processamento pesado na DGX;
 - manter o contrato `ResultV1` estavel;
 - avaliar uma abstracao de engine com modos `mock`, `local` e `remote`;
-- criar visualizacao Three.js inicialmente baseada em `data.pose3d` e
+- criar visualização Three.js inicialmente baseada em `data.pose3d` e
   `data.skeleton`;
-- deixar `data.fitting` como base para uma visualizacao biomecanica mais
+- deixar `data.fitting` como base para uma visualização biomecanica mais
   precisa no futuro.
 
 ## 12. Comandos Limpos Para Repetir A Validacao
