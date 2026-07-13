@@ -12,6 +12,17 @@ _engine_lock = Lock()
 
 
 def get_engine():
+    """Entrega uma instancia unica da engine configurada para o backend.
+
+    Parametros:
+        Nenhum. A escolha vem de `ENGINE_MODE` nas configuracoes.
+
+    Retorna:
+        Uma engine com metodo `process_video(...)`, podendo ser mock, remota ou local.
+
+    Observacao:
+        A instancia fica em cache para evitar recarregar modelos pesados a cada request.
+    """
     global _engine
 
     if _engine is None:

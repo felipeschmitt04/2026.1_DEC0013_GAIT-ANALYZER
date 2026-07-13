@@ -4,6 +4,8 @@ python-multipart==0.0.26
 pydantic==2.13.2
 numpy==1.26.4
 opencv-python-headless==4.9.0.80
+matplotlib==3.8.4
+reportlab==4.2.2
 tensorflow==2.21.0
 tensorflow-hub==0.16.1
 tf_keras==2.21.0
@@ -21,4 +23,3 @@ PyOpenGL==3.1.0
 glfw==2.10.0
 monocular_demos @ git+https://github.com/IntelligentSensingAndRehabilitation/monocular-demos.git@336603e45ecb8f02e48bc630378de08a5a7a0395
 gait_transformer @ git+https://github.com/peabody124/GaitTransformer@bd39b4c8924903647ed1f5ba5c1ae5c49ce32dff
-

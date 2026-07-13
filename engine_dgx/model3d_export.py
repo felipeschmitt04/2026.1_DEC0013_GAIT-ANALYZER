@@ -78,6 +78,16 @@ def build_model3d_payload(wrapper: Any, state: Any, pose: Any | None = None) -> 
 
 
 def build_mujoco_payload_from_qpos(model: Any, state: Any, pose: Any | None = None) -> dict | None:
+    """Recalcula a cena MuJoCo frame a frame a partir de `qpos`.
+
+    Parametros:
+        model: `MjModel` carregado do XML.
+        state: Estado retornado pelo wrapper, usado como fallback/debug.
+        pose: Sequencia de qpos/angulos ajustados, quando disponivel.
+
+    Retorna:
+        Payload `model3d` com geometrias, corpos, sites e transforms por frame.
+    """
     qpos = to_numpy(pose, dtype=float) if pose is not None else state_array(state, "qpos")
     if qpos is None or qpos.ndim != 2:
         logger.warning("Nao ha pose/qpos temporal para recomputar geometrias")
@@ -160,11 +170,24 @@ def build_mujoco_debug_payload(
     frames: list[dict],
     pose_was_passed: bool,
 ) -> dict:
+    """Cria informacoes de debug para validar o export 3D.
+
+    Parametros:
+        model: Modelo MuJoCo usado no forward.
+        qpos: Sequencia de poses aplicada ao modelo.
+        state_qpos: qpos original do state, quando existir.
+        frames: Frames de transforms ja calculados.
+        pose_was_passed: Indica se `pose` foi a fonte principal.
+
+    Retorna:
+        Dicionario com shapes, nomes de corpos e checks simples pelvis-cabeca.
+    """
     body_names = [get_model_name(model, "body", body_id) for body_id in range(model.nbody)]
     pelvis_id = body_names.index("pelvis") if "pelvis" in body_names else 1
     head_id = body_names.index("head") if "head" in body_names else 13
 
     def pelvis_to_head(frame_index: int) -> list[float] | None:
+        """Calcula o vetor pelvis-cabeca para um frame de debug."""
         if not frames:
             return None
         frame = frames[min(max(frame_index, 0), len(frames) - 1)]
@@ -199,6 +222,14 @@ def build_mujoco_debug_payload(
 
 
 def load_mujoco_model_from_package(wrapper: Any | None = None) -> Any | None:
+    """Carrega o `MjModel` do pacote instalado do monocular_demos.
+
+    Parametros:
+        wrapper: Wrapper ajustado pelo fitting, usado para aplicar calibracao quando possivel.
+
+    Retorna:
+        `MjModel` pronto para `mj_forward`, ou `None` se nao for possivel carregar.
+    """
     try:
         from monocular_demos.biomechanics_mjx.forward_kinematics import ForwardKinematics
 
@@ -266,6 +297,14 @@ def apply_wrapper_calibration_to_model(model: Any, fk: Any, wrapper: Any | None)
     return model
 
 def hide_geom_group_1(model: Any) -> None:
+    """Esconde geometrias auxiliares do grupo 1 no modelo MuJoCo.
+
+    Parametros:
+        model: Modelo MuJoCo a ajustar.
+
+    Saida:
+        Nao retorna valor. Altera alpha das geometrias quando o campo existe.
+    """
     try:
         indices = np.where(model.geom_group == 1)
         model.geom_rgba[indices, 3] = 0
@@ -274,6 +313,14 @@ def hide_geom_group_1(model: Any) -> None:
 
 
 def find_humanoid_xml_path() -> Path | None:
+    """Procura o arquivo `humanoid_torque.xml` dentro do pacote instalado.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Caminho do XML, ou `None` se o pacote/arquivo nao estiver disponivel.
+    """
     try:
         import monocular_demos
     except ImportError:
@@ -289,6 +336,14 @@ def find_humanoid_xml_path() -> Path | None:
 
 
 def build_state_only_payload(state: Any) -> dict | None:
+    """Monta um payload 3D usando apenas pontos de forward kinematics.
+
+    Parametros:
+        state: Estado retornado pelo wrapper quando o modelo MuJoCo nao foi encontrado.
+
+    Retorna:
+        Payload simplificado com corpos/sites por frame, ou `None` se nao houver frames.
+    """
     frames = export_frames(state)
     if not frames:
         logger.warning("State nao possui campos exportaveis para model3d")
@@ -341,6 +396,14 @@ def build_state_only_payload(state: Any) -> dict | None:
 
 
 def find_mujoco_model(wrapper: Any) -> Any | None:
+    """Tenta localizar um `MjModel` dentro do wrapper de fitting.
+
+    Parametros:
+        wrapper: Objeto retornado pelo fitting biomecanico.
+
+    Retorna:
+        Modelo encontrado diretamente ou por busca recursiva, senao `None`.
+    """
     candidates = [
         "mj_model",
         "mujoco_model",
@@ -370,6 +433,16 @@ def find_mujoco_model(wrapper: Any) -> Any | None:
 
 
 def log_object_summary(label: str, obj: Any, max_items: int = 80) -> None:
+    """Registra no log um resumo de atributos para investigar objetos desconhecidos.
+
+    Parametros:
+        label: Nome humano do objeto no log.
+        obj: Objeto a inspecionar.
+        max_items: Limite de atributos para nao poluir o log.
+
+    Saida:
+        Nao retorna valor. Escreve informacoes no logger.
+    """
     try:
         names = sorted(name for name in dir(obj) if not name.startswith("__"))
     except Exception as exc:
@@ -406,6 +479,16 @@ def find_model_recursive(
     max_depth: int,
     seen: set[int] | None = None,
 ) -> Any | None:
+    """Busca recursivamente um objeto parecido com `MjModel`.
+
+    Parametros:
+        obj: Objeto inicial.
+        max_depth: Profundidade maxima da busca.
+        seen: IDs ja visitados para evitar ciclos.
+
+    Retorna:
+        Primeiro modelo encontrado, ou `None`.
+    """
     if seen is None:
         seen = set()
 
@@ -435,10 +518,27 @@ def find_model_recursive(
 
 
 def looks_like_mujoco_model(value: Any) -> bool:
+    """Verifica por duck typing se um objeto parece ser `MjModel`.
+
+    Parametros:
+        value: Objeto candidato.
+
+    Retorna:
+        `True` quando possui campos estruturais esperados do MuJoCo.
+    """
     return value is not None and hasattr(value, "ngeom") and hasattr(value, "nbody")
 
 
 def get_nested_attr(obj: Any, path: str) -> Any | None:
+    """Acessa um atributo aninhado usando caminho com pontos.
+
+    Parametros:
+        obj: Objeto inicial.
+        path: Caminho como `fk.model`.
+
+    Retorna:
+        Valor encontrado ou `None` se alguma parte nao existir.
+    """
     current = obj
     for part in path.split("."):
         if current is None or not hasattr(current, part):
@@ -448,6 +548,14 @@ def get_nested_attr(obj: Any, path: str) -> Any | None:
 
 
 def export_bodies(model: Any) -> list[dict]:
+    """Exporta metadados dos corpos do modelo MuJoCo.
+
+    Parametros:
+        model: Modelo MuJoCo.
+
+    Retorna:
+        Lista com id, nome, pai e nome do pai de cada body.
+    """
     body_parentid = to_numpy(getattr(model, "body_parentid", []), dtype=int)
     nbody = int(getattr(model, "nbody", len(body_parentid)))
 
@@ -469,6 +577,14 @@ def export_bodies(model: Any) -> list[dict]:
 
 
 def export_geoms(model: Any) -> list[dict]:
+    """Exporta geometrias renderizaveis do modelo MuJoCo.
+
+    Parametros:
+        model: Modelo MuJoCo.
+
+    Retorna:
+        Lista de geoms com tipo, corpo dono, tamanho, mesh e cor.
+    """
     ngeom = int(getattr(model, "ngeom", 0))
     geom_type = to_numpy(getattr(model, "geom_type", []), dtype=int)
     geom_bodyid = to_numpy(getattr(model, "geom_bodyid", []), dtype=int)
@@ -501,6 +617,14 @@ def export_geoms(model: Any) -> list[dict]:
 
 
 def export_meshes(model: Any) -> list[dict]:
+    """Exporta vertices e faces das meshes referenciadas por geometrias.
+
+    Parametros:
+        model: Modelo MuJoCo.
+
+    Retorna:
+        Lista de meshes em formato simples para o frontend.
+    """
     nmesh = int(getattr(model, "nmesh", 0))
     if nmesh <= 0:
         return []
@@ -532,6 +656,14 @@ def export_meshes(model: Any) -> list[dict]:
 
 
 def export_sites(model: Any) -> list[dict]:
+    """Exporta sites auxiliares do modelo.
+
+    Parametros:
+        model: Modelo MuJoCo.
+
+    Retorna:
+        Lista com id, nome e body associado a cada site.
+    """
     nsite = int(getattr(model, "nsite", 0))
     site_bodyid = to_numpy(getattr(model, "site_bodyid", []), dtype=int)
 
@@ -553,6 +685,14 @@ def export_sites(model: Any) -> list[dict]:
 
 
 def export_frames(state: Any) -> list[dict]:
+    """Extrai transforms temporais disponiveis no state.
+
+    Parametros:
+        state: Estado retornado pelo forward kinematics.
+
+    Retorna:
+        Lista de frames com posicoes/matrizes de geoms, bodies e sites quando existirem.
+    """
     geom_xpos = state_array(state, "geom_xpos")
     geom_xmat = state_array(state, "geom_xmat")
     body_xpos = first_state_array(state, "xpos", "body_xpos")
@@ -575,6 +715,14 @@ def export_frames(state: Any) -> list[dict]:
 
 
 def infer_frame_count(*arrays: Any) -> int:
+    """Infere a quantidade de frames a partir dos arrays exportaveis.
+
+    Parametros:
+        *arrays: Arrays candidatos com dimensao temporal na primeira coluna.
+
+    Retorna:
+        Numero de frames, ou `0` quando nenhum array valido foi encontrado.
+    """
     for array in arrays:
         if array is not None and getattr(array, "ndim", 0) >= 2:
             return int(array.shape[0])
@@ -582,6 +730,17 @@ def infer_frame_count(*arrays: Any) -> int:
 
 
 def add_frame_array(frame: dict, name: str, values: np.ndarray | None, frame_index: int) -> None:
+    """Adiciona um array de um frame ao dicionario final.
+
+    Parametros:
+        frame: Dicionario do frame em construcao.
+        name: Nome do campo a preencher.
+        values: Array temporal de origem.
+        frame_index: Indice temporal desejado.
+
+    Saida:
+        Nao retorna valor. Atualiza `frame` quando `values` e valido.
+    """
     if values is None or values.ndim < 2:
         return
 
@@ -593,6 +752,15 @@ def add_frame_array(frame: dict, name: str, values: np.ndarray | None, frame_ind
 
 
 def state_array(state: Any, name: str) -> np.ndarray | None:
+    """Converte um atributo do state para `np.ndarray`.
+
+    Parametros:
+        state: Objeto de estado.
+        name: Nome do atributo desejado.
+
+    Retorna:
+        Array preenchido ou `None` quando o atributo nao existe/esta vazio.
+    """
     if not hasattr(state, name):
         return None
 
@@ -604,6 +772,15 @@ def state_array(state: Any, name: str) -> np.ndarray | None:
 
 
 def first_state_array(state: Any, *names: str) -> np.ndarray | None:
+    """Retorna o primeiro atributo de state que existir entre varios nomes.
+
+    Parametros:
+        state: Objeto de estado.
+        *names: Nomes candidatos em ordem de preferencia.
+
+    Retorna:
+        Primeiro array valido encontrado, ou `None`.
+    """
     for name in names:
         value = state_array(state, name)
         if value is not None:
@@ -612,6 +789,16 @@ def first_state_array(state: Any, *names: str) -> np.ndarray | None:
 
 
 def get_model_name(model: Any, object_type: str, object_id: int) -> str | None:
+    """Busca o nome oficial de um objeto MuJoCo.
+
+    Parametros:
+        model: Modelo MuJoCo.
+        object_type: Tipo como `body`, `geom`, `site` ou `mesh`.
+        object_id: ID numerico do objeto.
+
+    Retorna:
+        Nome do objeto, ou `None` se nao houver nome/consulta falhar.
+    """
     if object_id < 0:
         return None
 
@@ -635,6 +822,17 @@ def get_model_name(model: Any, object_type: str, object_id: int) -> str | None:
 
 
 def safe_row(array: np.ndarray, index: int, width: int, default: list[float] | None = None):
+    """Le uma linha de array com tamanho minimo garantido.
+
+    Parametros:
+        array: Array de origem.
+        index: Linha desejada.
+        width: Quantidade de valores esperada.
+        default: Valores usados quando a linha nao existe ou esta curta.
+
+    Retorna:
+        Lista com exatamente `width` valores.
+    """
     if default is None:
         default = [0.0] * width
     if array.ndim < 2 or index >= array.shape[0]:
@@ -644,6 +842,15 @@ def safe_row(array: np.ndarray, index: int, width: int, default: list[float] | N
 
 
 def to_numpy(value: Any, dtype=None) -> np.ndarray:
+    """Converte valores JAX/MuJoCo/listas para `np.ndarray` com fallback seguro.
+
+    Parametros:
+        value: Valor de origem.
+        dtype: Tipo opcional de conversao.
+
+    Retorna:
+        Array NumPy, vazio quando a conversao nao for possivel.
+    """
     if value is None:
         return np.array([], dtype=dtype or float)
 

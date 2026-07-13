@@ -5,6 +5,14 @@ from monocular_demos.biomechanics_mjx.monocular_trajectory import get_default_wr
 
 
 def main() -> None:
+    """Mostra um resumo do wrapper e do modelo MuJoCo carregado.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Imprime contagens de corpos/geometrias e consistencia de `nq`.
+    """
     wrapper = get_default_wrapper()
     xml_path = find_humanoid_xml_path()
     model = load_mujoco_model_from_package()

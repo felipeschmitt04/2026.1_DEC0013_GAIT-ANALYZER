@@ -1,5 +1,14 @@
 def calculate_angle_3d(p1, p2, p3):
-    """Calcula a flexão de uma articulação em graus clínicos (0 = esticado)."""
+    """Calcula a flexao clinica de uma articulacao em graus.
+
+    Parametros:
+        p1: Primeiro ponto do segmento proximal.
+        p2: Ponto central da articulacao.
+        p3: Ponto do segmento distal.
+
+    Retorna:
+        Angulo em graus, onde `0` representa a articulacao esticada.
+    """
     import numpy as np
 
     v1 = np.array(p1) - np.array(p2)
@@ -15,13 +24,29 @@ def calculate_angle_3d(p1, p2, p3):
 
 
 def calculate_distance_3d(p1, p2):
-    """Calcula a distância física entre dois pontos 3D."""
+    """Calcula a distancia euclidiana entre dois pontos 3D.
+
+    Parametros:
+        p1: Primeiro ponto `[x, y, z]`.
+        p2: Segundo ponto `[x, y, z]`.
+
+    Retorna:
+        Distancia entre os pontos na mesma unidade da pose recebida.
+    """
     import numpy as np
 
     return float(np.linalg.norm(np.array(p1) - np.array(p2)))
 
 
 def calculate_clinical_metrics(pose3d: list) -> dict:
+    """Extrai metricas clinicas simples a partir da pose 3D frame a frame.
+
+    Parametros:
+        pose3d: Lista de frames, cada um com os 17 pontos do esqueleto normalizado.
+
+    Retorna:
+        Dicionario com series temporais de joelho, quadril e distancia entre tornozelos.
+    """
     metrics = {
         "joelho_direito_graus": [],
         "joelho_esquerdo_graus": [],

@@ -9,6 +9,14 @@ STORAGE_DIR = BACKEND_DIR / "storage"
 
 
 def parse_args():
+    """Le argumentos de linha de comando para limpeza do storage.
+
+    Parametros:
+        Nenhum diretamente; usa `sys.argv` via argparse.
+
+    Retorna:
+        Namespace com diretorios, idade minima e modo dry-run/delete.
+    """
     parser = argparse.ArgumentParser(description="Limpa uploads/resultados antigos do storage local.")
     parser.add_argument("--older-than-days", type=int, default=7)
     parser.add_argument("--uploads-dir", type=Path, default=STORAGE_DIR / "uploads")
@@ -19,6 +27,17 @@ def parse_args():
 
 
 def ensure_inside_storage(path: Path) -> Path:
+    """Garante que um caminho esta dentro de `backend/storage`.
+
+    Parametros:
+        path: Caminho informado para limpeza.
+
+    Retorna:
+        Caminho resolvido.
+
+    Saida:
+        Levanta `ValueError` se o caminho aponta para fora do storage do backend.
+    """
     resolved = path.resolve()
     storage_root = STORAGE_DIR.resolve()
     if resolved != storage_root and storage_root not in resolved.parents:
@@ -27,6 +46,15 @@ def ensure_inside_storage(path: Path) -> Path:
 
 
 def collect_old_job_dirs(base_dir: Path, cutoff: datetime) -> list[dict]:
+    """Coleta pastas de jobs mais antigas que a data de corte.
+
+    Parametros:
+        base_dir: Pasta base a inspecionar, como uploads/results/jobs.
+        cutoff: Data limite; pastas modificadas antes dela entram na lista.
+
+    Retorna:
+        Lista com caminho, data de modificacao e tamanho de cada candidata.
+    """
     base_dir = ensure_inside_storage(base_dir)
     if not base_dir.exists():
         return []
@@ -50,10 +78,26 @@ def collect_old_job_dirs(base_dir: Path, cutoff: datetime) -> list[dict]:
 
 
 def directory_size(path: Path) -> int:
+    """Soma o tamanho dos arquivos dentro de uma pasta.
+
+    Parametros:
+        path: Pasta a medir.
+
+    Retorna:
+        Total em bytes.
+    """
     return sum(file.stat().st_size for file in path.rglob("*") if file.is_file())
 
 
 def main() -> None:
+    """Executa a limpeza ou simula o que seria removido.
+
+    Parametros:
+        Nenhum diretamente; usa argumentos da CLI.
+
+    Saida:
+        Nao retorna valor. Imprime um JSON com candidatos e modo executado.
+    """
     args = parse_args()
     cutoff = datetime.now(timezone.utc) - timedelta(days=args.older_than_days)
     candidates = {

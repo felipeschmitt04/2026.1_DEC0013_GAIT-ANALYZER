@@ -77,10 +77,11 @@ def test_health_returns_ok():
 def test_analyze_saves_result_and_allows_fetch(monkeypatch, tmp_path):
     client, settings = client_with_temp_storage(monkeypatch, tmp_path)
 
-    def fake_run_pipeline(video_path, height_mm, window_L, job_id, rotated=False):
+    def fake_run_pipeline(video_path, height_mm, window_L, job_id, rotated=False, output_dir=None):
         assert height_mm == 1750
         assert window_L == 150
         assert (settings.upload_dir / job_id / "input.mp4").exists()
+        assert output_dir == settings.results_dir / job_id
         return build_result(job_id)
 
     monkeypatch.setattr(analysis_route, "run_pipeline", fake_run_pipeline)
@@ -184,3 +185,39 @@ def test_list_jobs_marks_model3d_for_completed_queued_job(monkeypatch, tmp_path)
     assert job["has_result"] is True
     assert job["has_model3d"] is True
     assert job["artifacts"]["movement_npz"] == f"/results/{completed_job}/artifacts/movimento_exportado.npz"
+
+
+def test_get_result_report_generates_pdf_and_updates_artifact(monkeypatch, tmp_path):
+    client, settings = client_with_temp_storage(monkeypatch, tmp_path)
+    job_id = "completed-report-job"
+    result_path = settings.results_dir / job_id / "result.json"
+    analysis_route._write_json(result_path, build_result(job_id))
+
+    def fake_generate_report(payload, output_path):
+        assert payload["job"]["job_id"] == job_id
+        output_path.write_bytes(b"%PDF-1.4\nfake report\n")
+        return output_path
+
+    monkeypatch.setattr(analysis_route, "generate_gait_report_pdf", fake_generate_report)
+
+    response = client.get(f"/results/{job_id}/report.pdf")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content.startswith(b"%PDF-1.4")
+
+    payload = analysis_route._read_json(result_path)
+    assert payload["data"]["artifacts"]["report_pdf"] == f"/results/{job_id}/report.pdf"
+
+
+def test_get_result_report_rejects_unfinished_job(monkeypatch, tmp_path):
+    client, settings = client_with_temp_storage(monkeypatch, tmp_path)
+    job_id = "queued-report-job"
+    result = build_result(job_id)
+    result.job.status = "queued"
+    result.data = None
+    analysis_route._write_json(settings.results_dir / job_id / "result.json", result)
+
+    response = client.get(f"/results/{job_id}/report.pdf")
+
+    assert response.status_code == 409

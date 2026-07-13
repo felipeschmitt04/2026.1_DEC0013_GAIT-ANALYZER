@@ -169,6 +169,27 @@ Uso recomendado:
 - compartilhar resultado dentro do frontend;
 - evitar reenviar o video se o job ja foi processado.
 
+### GET /results/{job_id}/report.pdf
+
+Gera sob demanda e retorna o relatorio clinico em PDF da analise concluida.
+
+O PDF usa `input_summary`, `quality_info` e `data.metricas_clinicas` para montar:
+
+- resumo da analise;
+- tabela comparativa entre lado direito e esquerdo;
+- graficos de joelho e quadril direito vs esquerdo;
+- grafico de distancia entre tornozelos;
+- observacoes automaticas conservadoras.
+
+Possiveis respostas:
+
+| Status | Significado |
+| --- | --- |
+| `200` | PDF gerado/retornado com sucesso. |
+| `404` | O `job_id` nao possui `result.json`. |
+| `409` | A analise ainda nao foi concluida ou nao possui dados biomecanicos. |
+| `500` | Dependencias de relatorio indisponiveis no ambiente. |
+
 ### GET /results/{job_id}/artifacts/{filename}
 
 Retorna artefatos gerados pelo processamento quando existirem.
@@ -179,6 +200,7 @@ Nomes aceitos:
 | --- | --- |
 | `movimento_exportado.npz` | Exportacao dos dados de movimento/fitting. |
 | `3d_rebuild.mp4` | Video renderizado 3D, se existir no futuro. |
+| `relatorio_analise_marcha.pdf` | Relatorio clinico gerado pelo backend. |
 
 Observacao: a visualizacao web nao deve depender de `3d_rebuild.mp4`. O caminho
 principal e usar `data.fitting` para animar o modelo 3D interativo no navegador.

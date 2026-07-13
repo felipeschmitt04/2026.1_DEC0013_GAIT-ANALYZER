@@ -19,16 +19,43 @@ RUN_ONCE = os.getenv("RUN_ONCE", "false").lower() in {"1", "true", "yes", "on"}
 
 
 def headers() -> dict[str, str]:
+    """Monta os headers de autenticacao do worker.
+
+    Parametros:
+        Nenhum. Usa `WORKER_TOKEN` do ambiente.
+
+    Retorna:
+        Dicionario com `X-Worker-Token` quando o token foi configurado.
+    """
     return {"X-Worker-Token": WORKER_TOKEN} if WORKER_TOKEN else {}
 
 
 def post_json(client: httpx.Client, path: str, payload: dict):
+    """Envia um POST JSON para o backend principal.
+
+    Parametros:
+        client: Cliente HTTP reutilizado pelo loop do worker.
+        path: Caminho relativo da rota no backend.
+        payload: Corpo JSON a enviar.
+
+    Retorna:
+        Resposta JSON ja validada por `raise_for_status`.
+    """
     response = client.post(f"{BACKEND_URL}{path}", headers=headers(), json=payload)
     response.raise_for_status()
     return response.json()
 
 
 def download_input(client: httpx.Client, job: dict) -> Path:
+    """Baixa o video de entrada de um job para a DGX.
+
+    Parametros:
+        client: Cliente HTTP do worker.
+        job: Dicionario do job recebido da fila.
+
+    Retorna:
+        Caminho local do `input.mp4` baixado.
+    """
     job_id = job["job_id"]
     target_dir = UPLOAD_DIR / job_id
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -44,6 +71,16 @@ def download_input(client: httpx.Client, job: dict) -> Path:
 
 
 def submit_result(client: httpx.Client, job: dict, payload: dict) -> None:
+    """Envia ao backend o resultado bruto e artefatos gerados.
+
+    Parametros:
+        client: Cliente HTTP do worker.
+        job: Job processado.
+        payload: Saida bruta de `process_job_file`.
+
+    Saida:
+        Nao retorna valor. Levanta erro HTTP se o backend rejeitar o envio.
+    """
     job_id = job["job_id"]
     result_dir = RESULTS_DIR / job_id
     raw_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -73,6 +110,14 @@ def submit_result(client: httpx.Client, job: dict, payload: dict) -> None:
 
 
 def process_one_job(client: httpx.Client) -> bool:
+    """Tenta processar um unico job da fila.
+
+    Parametros:
+        client: Cliente HTTP reutilizavel.
+
+    Retorna:
+        `True` quando encontrou um job e tentou processar; `False` quando a fila estava vazia.
+    """
     response = client.get(f"{BACKEND_URL}/worker/jobs/next", headers=headers())
     response.raise_for_status()
     job = response.json().get("job")
@@ -113,6 +158,14 @@ def process_one_job(client: httpx.Client) -> bool:
 
 
 def main() -> None:
+    """Loop principal do pull worker da DGX.
+
+    Parametros:
+        Nenhum. Configuracao vem de variaveis de ambiente.
+
+    Saida:
+        Nao retorna enquanto `RUN_ONCE` for falso; fica consultando a fila periodicamente.
+    """
     logger.info("Starting pull worker %s against %s", WORKER_ID, BACKEND_URL)
     with httpx.Client(timeout=None) as client:
         while True:

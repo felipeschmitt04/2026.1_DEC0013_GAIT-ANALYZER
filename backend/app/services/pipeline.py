@@ -25,6 +25,20 @@ def run_pipeline(
     rotated: bool = False,
     output_dir: str | Path | None = None,
 ):
+    """Executa o fluxo completo de analise quando a API processa local/remotamente.
+
+    Parametros:
+        video_path: Caminho do video salvo no backend.
+        height_mm: Altura do usuario em milimetros.
+        window_L: Tamanho da janela temporal usada pela inferencia de marcha.
+        engine: Engine opcional para testes; quando omitida, vem de `get_engine()`.
+        job_id: Identificador opcional ja criado pela rota.
+        rotated: Indica se o video precisa ser rotacionado antes da inferencia.
+        output_dir: Pasta onde a engine pode salvar artefatos.
+
+    Retorna:
+        `ResultV1` completo em sucesso ou com `error` preenchido em falha.
+    """
     logger.info("Iniciando pipeline")
     logger.debug("Criando job")
 
@@ -39,6 +53,15 @@ def run_pipeline(
     )
 
     def finish_job(status: str, stage: str | None = None) -> None:
+        """Fecha o job interno do pipeline com horario final e duracao.
+
+        Parametros:
+            status: Status final a registrar.
+            stage: Etapa final opcional; quando omitida, mantem a etapa atual.
+
+        Saida:
+            Nao retorna valor. Atualiza o objeto `job` do escopo externo.
+        """
         job.status = status
         if stage is not None:
             job.stage = stage
@@ -52,11 +75,11 @@ def run_pipeline(
     try:
         logger.info("Extraindo metadados")
 
-        video_data = get_metadata(video_path)  # Extrai todos os metadados dos vídeos
+        video_data = get_metadata(video_path)
 
         logger.info("Metadados extraídos, instanciando classes")
 
-        input_summary = InputSummary(  # Com base nos metadados, preenche o InputSummary
+        input_summary = InputSummary(
             video_path=video_path,
             height_mm=height_mm,
             window_L=window_L,
@@ -67,7 +90,7 @@ def run_pipeline(
 
         logger.debug("InputSummary foi")
 
-        quality_info = QualityInfo(  # Aqui, com base nos metadados também, são preenchidos os dados da qualidade dos frames
+        quality_info = QualityInfo(
             frames_total=video_data["frame_count"],
             frames_without_detection=0,
             warnings=video_data["warnings"],

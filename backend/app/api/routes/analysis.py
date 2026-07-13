@@ -16,6 +16,7 @@ from app.schemas.job import JobInfo
 from app.schemas.result import ResultV1
 from app.services.job_store import create_job, list_jobs as list_queued_jobs, read_job as read_queued_job
 from app.services.pipeline import run_pipeline
+from app.services.report_generator import REPORT_FILENAME, generate_gait_report_pdf
 from app.services.video_metadata import get_metadata
 
 
@@ -24,9 +25,18 @@ router = APIRouter()
 
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv"}
 UPLOAD_CHUNK_SIZE = 1024 * 1024
+ALLOWED_ARTIFACT_FILENAMES = {"3d_rebuild.mp4", "movimento_exportado.npz", REPORT_FILENAME}
 
 
 def _clear_accelerator_caches() -> None:
+    """Libera caches de aceleradores antes de uma analise local pesada.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Se JAX/Equinox nao estiverem instalados, apenas registra aviso.
+    """
     try:
         import equinox as eqx
         import jax
@@ -39,17 +49,42 @@ def _clear_accelerator_caches() -> None:
 
 
 def _write_json(path: Path, payload) -> None:
+    """Salva um objeto Python como JSON formatado.
+
+    Parametros:
+        path: Arquivo de destino.
+        payload: Objeto serializavel, incluindo modelos Pydantic.
+
+    Saida:
+        Nao retorna valor. Cria a pasta pai automaticamente.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
         json.dump(jsonable_encoder(payload), file, ensure_ascii=False, indent=2)
 
 
 def _read_json(path: Path):
+    """Le um arquivo JSON do disco.
+
+    Parametros:
+        path: Caminho do arquivo JSON.
+
+    Retorna:
+        O conteudo desserializado como `dict`, `list` ou valor JSON equivalente.
+    """
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def _validate_video_upload(video: UploadFile) -> None:
+    """Valida rapidamente se o upload parece ser um video aceito.
+
+    Parametros:
+        video: Arquivo enviado pelo cliente via multipart/form-data.
+
+    Saida:
+        Nao retorna valor. Levanta `HTTPException 415` quando a extensao/tipo nao e aceito.
+    """
     suffix = Path(video.filename or "").suffix.lower()
     content_type = (video.content_type or "").lower()
     looks_like_video = content_type.startswith("video/")
@@ -67,6 +102,16 @@ def _validate_video_upload(video: UploadFile) -> None:
 
 
 def _save_upload_file(video: UploadFile, upload_path: Path, max_bytes: int) -> int:
+    """Grava o upload em disco sem carregar o arquivo inteiro em memoria.
+
+    Parametros:
+        video: Arquivo recebido pela API.
+        upload_path: Destino final do video.
+        max_bytes: Limite maximo permitido para evitar uploads gigantes.
+
+    Retorna:
+        Quantidade de bytes gravados.
+    """
     total_bytes = 0
 
     with upload_path.open("wb") as buffer:
@@ -90,6 +135,18 @@ def _save_upload_file(video: UploadFile, upload_path: Path, max_bytes: int) -> i
 
 
 def _build_queued_result(job_id: str, upload_path: Path, height_mm: int, window_l: int, rotated: bool) -> ResultV1:
+    """Monta a resposta inicial quando o backend trabalha em modo fila.
+
+    Parametros:
+        job_id: Identificador unico da analise.
+        upload_path: Video ja salvo no disco.
+        height_mm: Altura informada pelo usuario, em milimetros.
+        window_l: Janela usada pelo modelo temporal de marcha.
+        rotated: Indica se o front informou que o video deve ser rotacionado.
+
+    Retorna:
+        Um `ResultV1` com status `queued`, pronto para o front acompanhar por polling.
+    """
     now = datetime.now(timezone.utc)
     video_data = get_metadata(str(upload_path))
     return ResultV1(
@@ -120,6 +177,15 @@ def _build_queued_result(job_id: str, upload_path: Path, height_mm: int, window_
 
 
 def _build_failed_ingest_result(job_id: str, error_code: str) -> ResultV1:
+    """Monta uma resposta de falha quando o video nao passa pela validacao inicial.
+
+    Parametros:
+        job_id: Identificador da analise criada.
+        error_code: Codigo tecnico que explica a falha de ingestao.
+
+    Retorna:
+        Um `ResultV1` com `error` preenchido e status `failed`.
+    """
     now = datetime.now(timezone.utc)
     return ResultV1(
         result_version="1.0",
@@ -142,6 +208,16 @@ def _build_failed_ingest_result(job_id: str, error_code: str) -> ResultV1:
 
 
 def _store_generated_artifacts(result_dir: Path, job_id: str, source_artifacts: dict | None = None) -> dict:
+    """Move artefatos gerados pela engine para a pasta publica do resultado.
+
+    Parametros:
+        result_dir: Pasta final do job dentro de `storage/results`.
+        job_id: Identificador usado para montar URLs publicas dos artefatos.
+        source_artifacts: Caminhos temporarios retornados pela engine.
+
+    Retorna:
+        Dicionario com chaves do contrato (`video_3d`, `movement_npz`) e URLs publicas.
+    """
     artifacts = {}
 
     for filename, key in (
@@ -164,8 +240,19 @@ def _store_generated_artifacts(result_dir: Path, job_id: str, source_artifacts: 
 
 
 def _job_summary_from_result(job_id: str, payload: dict) -> dict:
+    """Extrai um resumo leve a partir de um `result.json`.
+
+    Parametros:
+        job_id: Identificador do job.
+        payload: Conteudo completo do resultado salvo.
+
+    Retorna:
+        Dicionario compacto para alimentar a rota `/jobs`.
+    """
     data = payload.get("data") or {}
     artifacts = data.get("artifacts") or {}
+    if (get_settings().results_dir / job_id / REPORT_FILENAME).exists():
+        artifacts = {**artifacts, "report_pdf": f"/results/{job_id}/report.pdf"}
     return {
         "job_id": job_id,
         "job": payload.get("job"),
@@ -180,6 +267,15 @@ def _job_summary_from_result(job_id: str, payload: dict) -> dict:
 
 
 def _read_result_summary_from_path(job_id: str, result_path: Path | None) -> dict | None:
+    """Tenta ler o resumo de um resultado ja salvo.
+
+    Parametros:
+        job_id: Identificador do job.
+        result_path: Caminho do `result.json`, quando conhecido.
+
+    Retorna:
+        Resumo do resultado ou `None` se o arquivo nao existe/esta invalido.
+    """
     if result_path is None or not result_path.exists():
         return None
 
@@ -191,6 +287,14 @@ def _read_result_summary_from_path(job_id: str, result_path: Path | None) -> dic
 
 
 def _collect_job_summaries() -> list[dict]:
+    """Consolida jobs vindos de uploads, resultados e fila.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Lista ordenada do job mais recente para o mais antigo, usada pela rota `/jobs`.
+    """
     settings = get_settings()
     jobs_by_id = {}
 
@@ -246,12 +350,77 @@ def _collect_job_summaries() -> list[dict]:
     )
 
 
+def _report_is_outdated(result_path: Path, report_path: Path) -> bool:
+    """Verifica se o PDF precisa ser gerado novamente.
+
+    Parametros:
+        result_path: Caminho do `result.json`.
+        report_path: Caminho do PDF.
+
+    Retorna:
+        `True` quando o PDF nao existe ou e mais antigo que o resultado.
+    """
+    if not report_path.exists():
+        return True
+    return report_path.stat().st_mtime < result_path.stat().st_mtime
+
+
+def _ensure_report_pdf(job_id: str) -> Path:
+    """Garante que o relatorio PDF existe para um job finalizado.
+
+    Parametros:
+        job_id: Identificador da analise.
+
+    Retorna:
+        Caminho do PDF gerado ou reutilizado.
+    """
+    settings = get_settings()
+    result_dir = settings.results_dir / job_id
+    result_path = result_dir / "result.json"
+    report_path = result_dir / REPORT_FILENAME
+
+    if not result_path.exists():
+        raise HTTPException(status_code=404, detail="Resultado nao encontrado")
+
+    payload = _read_json(result_path)
+    if (payload.get("job") or {}).get("status") != "completed" or not payload.get("data"):
+        raise HTTPException(status_code=409, detail="Relatorio disponivel apenas para analises concluidas")
+
+    if _report_is_outdated(result_path, report_path):
+        data = payload.setdefault("data", {})
+        artifacts = data.get("artifacts") or {}
+        data["artifacts"] = artifacts
+        if artifacts.get("report_pdf") != f"/results/{job_id}/report.pdf":
+            artifacts["report_pdf"] = f"/results/{job_id}/report.pdf"
+            _write_json(result_path, payload)
+
+        try:
+            generate_gait_report_pdf(payload, report_path)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            logger.exception("Falha de dependencia ao gerar relatorio do job %s", job_id)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return report_path
+
+
 @router.post("/analyze")
 async def analyze_video(
     video: UploadFile = File(...),
     height_mm: int = Form(...),
     rotated: bool = Form(False),
 ):
+    """Recebe um video e inicia a analise de marcha.
+
+    Parametros:
+        video: Arquivo de video enviado pelo front.
+        height_mm: Altura do paciente/usuario em milimetros.
+        rotated: Indica se o video deve ser tratado como rotacionado.
+
+    Retorna:
+        `ResultV1`. Em modo `queue`, retorna status `queued`; em modo local, retorna o resultado final.
+    """
     if height_mm <= 0:
         raise HTTPException(status_code=422, detail="height_mm deve ser maior que zero")
 
@@ -320,12 +489,28 @@ async def analyze_video(
 
 @router.get("/jobs")
 async def list_jobs():
+    """Lista analises conhecidas pela API.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Total e lista resumida de jobs, incluindo status, artefatos e disponibilidade de resultado.
+    """
     jobs = _collect_job_summaries()
     return {"total": len(jobs), "jobs": jobs}
 
 
 @router.get("/status/{job_id}")
 async def get_status(job_id: str):
+    """Consulta o estado atual de uma analise.
+
+    Parametros:
+        job_id: Identificador retornado pela rota `/analyze`.
+
+    Retorna:
+        O bloco `job` do resultado final ou o estado atual salvo na fila.
+    """
     settings = get_settings()
     result_path = settings.results_dir / job_id / "result.json"
     upload_path = settings.upload_dir / job_id / "input.mp4"
@@ -350,6 +535,14 @@ async def get_status(job_id: str):
 
 @router.get("/results/{job_id}")
 async def get_result(job_id: str):
+    """Entrega o resultado completo de uma analise finalizada.
+
+    Parametros:
+        job_id: Identificador retornado pela rota `/analyze`.
+
+    Retorna:
+        Conteudo do `result.json` salvo para o job.
+    """
     settings = get_settings()
     result_path = settings.results_dir / job_id / "result.json"
 
@@ -359,11 +552,41 @@ async def get_result(job_id: str):
     return _read_json(result_path)
 
 
+@router.get("/results/{job_id}/report.pdf")
+async def get_result_report(job_id: str):
+    """Gera ou baixa o relatorio PDF de uma analise concluida.
+
+    Parametros:
+        job_id: Identificador retornado pela rota `/analyze`.
+
+    Retorna:
+        `FileResponse` com o PDF clinico da analise de marcha.
+    """
+    report_path = _ensure_report_pdf(job_id)
+    return FileResponse(
+        report_path,
+        media_type="application/pdf",
+        filename=REPORT_FILENAME,
+    )
+
+
 @router.get("/results/{job_id}/artifacts/{filename}")
 async def get_result_artifact(job_id: str, filename: str):
-    allowed_filenames = {"3d_rebuild.mp4", "movimento_exportado.npz"}
-    if filename not in allowed_filenames:
+    """Baixa um artefato gerado pela analise.
+
+    Parametros:
+        job_id: Identificador do job.
+        filename: Nome permitido do arquivo, como `3d_rebuild.mp4`,
+            `movimento_exportado.npz` ou `relatorio_analise_marcha.pdf`.
+
+    Retorna:
+        `FileResponse` com o arquivo solicitado.
+    """
+    if filename not in ALLOWED_ARTIFACT_FILENAMES:
         raise HTTPException(status_code=404, detail="Artefato não encontrado")
+
+    if filename == REPORT_FILENAME:
+        return await get_result_report(job_id)
 
     settings = get_settings()
     artifact_path = settings.results_dir / job_id / filename

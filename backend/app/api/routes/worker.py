@@ -32,12 +32,29 @@ ALLOWED_ARTIFACTS = {"3d_rebuild.mp4": "video_3d", "movimento_exportado.npz": "m
 
 
 def _require_worker_token(x_worker_token: str | None) -> None:
+    """Protege as rotas usadas pela DGX/pull worker.
+
+    Parametros:
+        x_worker_token: Valor recebido no header `X-Worker-Token`.
+
+    Saida:
+        Nao retorna valor. Levanta `HTTPException 401` quando o token nao confere.
+    """
     settings = get_settings()
     if settings.worker_token and x_worker_token != settings.worker_token:
         raise HTTPException(status_code=401, detail="Worker token invalido")
 
 
 def _write_json(path: Path, payload) -> None:
+    """Escreve JSON em disco usando o mesmo formato do contrato da API.
+
+    Parametros:
+        path: Arquivo de destino.
+        payload: Objeto serializavel, normalmente um `ResultV1`.
+
+    Saida:
+        Nao retorna valor. Cria a pasta pai se ela ainda nao existir.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(jsonable_encoder(payload), ensure_ascii=False, indent=2),
@@ -46,6 +63,16 @@ def _write_json(path: Path, payload) -> None:
 
 
 def _build_result_from_raw(job: dict, raw_data: dict, artifacts: dict[str, str]) -> ResultV1:
+    """Converte a saida bruta da DGX para o contrato `ResultV1`.
+
+    Parametros:
+        job: Metadados do job salvo na fila.
+        raw_data: Resultado bruto produzido pela engine pesada.
+        artifacts: URLs dos arquivos opcionais enviados pelo worker.
+
+    Retorna:
+        `ResultV1` completo, com cinematicas, pose 3D, metricas clinicas e metadados.
+    """
     video_data = get_metadata(job["upload_path"])
     created_at = datetime.fromisoformat(job["created_at"])
     started_at = datetime.fromisoformat(job["started_at"] or job["created_at"])
@@ -101,6 +128,14 @@ def _build_result_from_raw(job: dict, raw_data: dict, artifacts: dict[str, str])
 
 @router.get("/jobs/next")
 async def get_next_job(x_worker_token: str | None = Header(None)):
+    """Entrega ao worker o proximo job disponivel, sem fazer claim ainda.
+
+    Parametros:
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        Dicionario no formato `{"job": job | None}`.
+    """
     _require_worker_token(x_worker_token)
     job = next_available_job()
     return {"job": job}
@@ -112,6 +147,16 @@ async def claim_next_job(
     worker_id: str = Body(..., embed=True),
     x_worker_token: str | None = Header(None),
 ):
+    """Reserva um job para um worker especifico.
+
+    Parametros:
+        job_id: Job que o worker quer processar.
+        worker_id: Identificador da maquina/processo worker.
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        O job atualizado como `claimed`.
+    """
     _require_worker_token(x_worker_token)
     job = claim_job(job_id, worker_id=worker_id)
     if job is None:
@@ -127,6 +172,18 @@ async def worker_heartbeat(
     stage: str = Body("processing", embed=True),
     x_worker_token: str | None = Header(None),
 ):
+    """Atualiza o sinal de vida de um worker durante o processamento.
+
+    Parametros:
+        job_id: Job em processamento.
+        worker_id: Worker dono do job.
+        status: Status operacional a gravar.
+        stage: Etapa atual do processamento.
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        O job atualizado com `heartbeat_at` recente.
+    """
     _require_worker_token(x_worker_token)
     try:
         job = heartbeat_job(job_id, worker_id=worker_id, status=status, stage=stage)
@@ -137,6 +194,15 @@ async def worker_heartbeat(
 
 @router.get("/jobs/{job_id}/input")
 async def get_job_input(job_id: str, x_worker_token: str | None = Header(None)):
+    """Permite que a DGX baixe o video de entrada de um job.
+
+    Parametros:
+        job_id: Identificador do job.
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        `FileResponse` com o `input.mp4` salvo pela API.
+    """
     _require_worker_token(x_worker_token)
     try:
         job = read_job(job_id)
@@ -158,6 +224,18 @@ async def submit_job_result(
     video_3d: UploadFile | None = File(None),
     x_worker_token: str | None = Header(None),
 ):
+    """Recebe da DGX o resultado bruto e artefatos opcionais.
+
+    Parametros:
+        job_id: Job finalizado pelo worker.
+        raw_result: JSON com a saida bruta da engine.
+        movement_npz: Arquivo opcional com movimento exportado.
+        video_3d: Video opcional de reconstrucao 3D.
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        `ResultV1` ja convertido para o contrato publico do backend.
+    """
     _require_worker_token(x_worker_token)
     try:
         job = read_job(job_id)
@@ -199,6 +277,19 @@ async def submit_job_failure(
     details: str | None = Body(None, embed=True),
     x_worker_token: str | None = Header(None),
 ):
+    """Registra uma falha reportada pelo worker.
+
+    Parametros:
+        job_id: Job que falhou.
+        code: Codigo tecnico da falha.
+        message: Mensagem humana/operacional.
+        retryable: Indica se uma nova tentativa faria sentido.
+        details: Detalhe opcional para debug.
+        x_worker_token: Token de autorizacao do worker.
+
+    Retorna:
+        O job atualizado com status de falha.
+    """
     _require_worker_token(x_worker_token)
     error = {"code": code, "message": message, "retryable": retryable, "details": details}
     try:

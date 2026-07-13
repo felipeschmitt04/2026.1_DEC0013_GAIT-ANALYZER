@@ -78,6 +78,7 @@ Endpoints principais:
 - `GET /jobs`
 - `GET /status/{job_id}`
 - `GET /results/{job_id}`
+- `GET /results/{job_id}/report.pdf`
 - `GET /results/{job_id}/artifacts/{filename}`
 
 O contrato completo está em

@@ -6,6 +6,14 @@ from pathlib import Path
 
 
 def main() -> None:
+    """Imprime um diagnostico rapido das bibliotecas pesadas do ambiente.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Mostra GPUs, devices JAX e versoes no terminal.
+    """
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
     os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")

@@ -8,6 +8,14 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 def _resolve_path(value: str) -> Path:
+    """Resolve caminhos configurados por variavel de ambiente.
+
+    Parametros:
+        value: Caminho absoluto ou relativo ao diretorio `backend`.
+
+    Retorna:
+        Um `Path` absoluto apontando para o local configurado.
+    """
     path = Path(value)
     if path.is_absolute():
         return path
@@ -15,24 +23,62 @@ def _resolve_path(value: str) -> Path:
 
 
 def _parse_cors_origins(value: str) -> list[str]:
+    """Transforma a string de CORS em uma lista limpa de origens.
+
+    Parametros:
+        value: Texto separado por virgulas, como `"http://localhost:3000,https://app.com"`.
+
+    Retorna:
+        Lista apenas com origens preenchidas, sem espacos extras.
+    """
     origins = [origin.strip() for origin in value.split(",")]
     return [origin for origin in origins if origin]
 
 
 def _parse_bool(value: str) -> bool:
+    """Interpreta valores comuns de ambiente como booleanos.
+
+    Parametros:
+        value: Texto vindo de uma variavel de ambiente.
+
+    Retorna:
+        `True` para valores afirmativos como `true`, `yes`, `on` ou `1`.
+    """
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _is_production(app_env: str) -> bool:
+    """Indica se a API esta rodando em ambiente de producao.
+
+    Parametros:
+        app_env: Valor da variavel `APP_ENV`.
+
+    Retorna:
+        `True` quando o ambiente foi marcado como `prod` ou `production`.
+    """
     return app_env.strip().lower() in {"prod", "production"}
 
 
 def _is_unsafe_token(value: str | None) -> bool:
+    """Detecta tokens vazios ou ainda deixados com valor de exemplo.
+
+    Parametros:
+        value: Token configurado para proteger as rotas do worker.
+
+    Retorna:
+        `True` quando o token nao existe, esta vazio ou ainda e `change-me`.
+    """
     return value is None or value.strip() in {"", "change-me"}
 
 
 @dataclass(frozen=True)
 class Settings:
+    """Agrupa todas as configuracoes de runtime da API.
+
+    Os valores saem de variaveis de ambiente, mas ficam tipados em um unico
+    objeto para o restante do backend nao precisar conhecer detalhes de parsing.
+    """
+
     app_env: str
     app_host: str
     app_port: int
@@ -53,6 +99,14 @@ class Settings:
 
 @lru_cache
 def get_settings() -> Settings:
+    """Carrega as configuracoes da aplicacao uma unica vez por processo.
+
+    Parametros:
+        Nenhum. A funcao le variaveis de ambiente do processo atual.
+
+    Retorna:
+        Uma instancia imutavel de `Settings` usada pela API, fila e pipeline.
+    """
     use_mock_engine = _parse_bool(os.getenv("USE_MOCK_ENGINE", "false"))
     engine_mode = os.getenv("ENGINE_MODE", "mock" if use_mock_engine else "local")
     max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "200"))
@@ -78,6 +132,14 @@ def get_settings() -> Settings:
 
 
 def validate_runtime_settings(settings: Settings | None = None) -> None:
+    """Valida configuracoes que seriam perigosas em producao.
+
+    Parametros:
+        settings: Configuracoes ja carregadas. Quando omitido, usa `get_settings()`.
+
+    Saida:
+        Nao retorna valor. Levanta `RuntimeError` se encontrar configuracao insegura.
+    """
     settings = settings or get_settings()
     if not _is_production(settings.app_env):
         return
@@ -90,6 +152,14 @@ def validate_runtime_settings(settings: Settings | None = None) -> None:
 
 
 def ensure_storage_dirs() -> None:
+    """Garante que as pastas de upload, resultado, temporarios e jobs existam.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Cria diretorios no disco quando necessario.
+    """
     settings = get_settings()
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.results_dir.mkdir(parents=True, exist_ok=True)

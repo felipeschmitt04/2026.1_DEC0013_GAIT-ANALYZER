@@ -12,6 +12,12 @@ Pose3D = list[PoseFrame]
 
 
 class BiomechanicalData(BaseModel):
+    """Dados cientificos que o front usa para montar graficos e visualizacao 3D.
+
+    Reune eventos de marcha, cinematicas, pose 3D, modelo ajustado, metricas clinicas
+    e links para artefatos gerados pelo processamento.
+    """
+
     events: list[list[float]]
     kinematics: dict[str, Any]
     pose3d: Pose3D
@@ -24,6 +30,13 @@ class BiomechanicalData(BaseModel):
 
 
 class ResultV1(BaseModel):
+    """Contrato principal de resposta da analise.
+
+    Este e o objeto que o frontend deve consumir. Em sucesso, `data` vem preenchido;
+    em falha ou fila, os blocos `job`, `error`, `input_summary` e `quality_info`
+    explicam o estado atual da analise.
+    """
+
     result_version: str
     job: JobInfo
     error: ErrorInfo | None = None
