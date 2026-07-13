@@ -1,0 +1,287 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { User, ShieldCheck, LogOut, X, Key, Mail, Stethoscope, IdCard, Edit3, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { usePaciente } from "@/app/PacienteContext";
+
+// Busca informações salvas nos cookies do navegador
+function getCookie(nome: string): string | null {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(new RegExp(`(^| )${nome}=([^;]+)`))
+  return match ? match[2] : null
+}
+
+interface Profissional {
+  id: string;
+  nome: string;
+  especialidade: string;
+  registro: string;
+  observacoes?: string | null;
+  email: string;
+  senha: string;
+}
+
+export default function ConfiguracoesPage() {
+  const router = useRouter();
+  
+  // Funções do contexto usadas para limpar os dados temporários ao sair do sistema
+  const { setPacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente();
+
+  const [role, setRole] = useState<string | null>(null);
+
+  const [perfil, setPerfil] = useState<Profissional | null>(null);
+  const [carregandoPerfil, setCarregandoPerfil] = useState(true);
+  const [modoEdicaoPerfil, setModoEdicaoPerfil] = useState(false);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+
+  const [formNome, setFormNome] = useState("");
+  const [formEspecialidade, setFormEspecialidade] = useState("");
+  const [formRegistro, setFormRegistro] = useState("");
+  const [formObservacoes, setFormObservacoes] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formSenha, setFormSenha] = useState("");
+
+  const [modalEmail, setModalEmail] = useState(false);
+  const [modalSenha, setModalSenha] = useState(false);
+  const [email, setEmail] = useState("usuario@exemplo.com");
+  const [novoEmail, setNovoEmail] = useState("");
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+
+  // vê a permissão do usuário assim que a página é carregada
+  useEffect(() => {
+    setRole(getCookie("user-role"));
+  }, []);
+
+  // assim que soubermos a role, se for profissional, busca o perfil dele
+  useEffect(() => {
+    if (role === null) return; // ainda não leu o cookie
+    // Administradores não possuem perfil profissional para editar
+    if (role === "admin") {
+      setCarregandoPerfil(false);
+      return;
+    }
+    //obtém o cooki user-id
+    const userId = getCookie("user-id");
+    if (!userId) {
+      setCarregandoPerfil(false);
+      return;
+    }
+
+    // Busca todos os profissionais e filtra apenas o usuário autenticado
+    fetch("/api/profissionais")
+      .then((res) => res.json())
+      .then((lista: Profissional[]) => {
+        const meuPerfil = lista.find((p) => p.id === userId) || null;
+        setPerfil(meuPerfil);
+        if (meuPerfil) {
+          setFormNome(meuPerfil.nome);
+          setFormEspecialidade(meuPerfil.especialidade);
+          setFormRegistro(meuPerfil.registro);
+          setFormObservacoes(meuPerfil.observacoes || "");
+          setFormEmail(meuPerfil.email);
+          setFormSenha(meuPerfil.senha);
+        }
+      })
+      .catch((err) => console.error("Erro ao carregar perfil:", err))
+      .finally(() => setCarregandoPerfil(false));
+  }, [role]);
+
+  // Encerra a sessão atual e remove dados temporários armazenados no sistema
+  const handleLogout = () => {
+    if (!confirm("Deseja realmente sair?")) return;
+    
+    // Reseta toda a memória RAM global do Contexto
+    setPacienteAtivo(null);
+    setAnaliseAtiva(null);
+    setJobIdAtivo(null); 
+    
+    // Limpa os dados salvos no navegador durante as seleções manuais
+    localStorage.removeItem("paciente_selecionado");
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("analise_salva_")) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Limpa os cookies de autenticação da sessão clínica
+    document.cookie = "user-role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "user-id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; 
+    
+    router.push("/login");
+  };
+  // Envia as alterações do perfil para atualizar os dados no banco
+  const handleSalvarPerfil = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!perfil) return;
+
+    setSalvandoPerfil(true);
+    try {
+      // Atualiza o profissional
+      const response = await fetch("/api/profissionais", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: perfil.id,
+          nome: formNome,
+          especialidade: formEspecialidade,
+          registro: formRegistro,
+          email: formEmail,
+          senha: formSenha,
+          observacoes: formObservacoes,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Erro ao salvar perfil.");
+
+      setPerfil(data);
+      setModoEdicaoPerfil(false);
+      alert("Perfil updated com sucesso!");
+    } catch (err: any) {
+      alert(err.message || "Não foi possível salvar as alterações.");
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  };
+  // Restaura os valores originais e cancela o modo de edição
+  const cancelarEdicaoPerfil = () => {
+    if (!perfil) return;
+    setFormNome(perfil.nome);
+    setFormEspecialidade(perfil.especialidade);
+    setFormRegistro(perfil.registro);
+    setFormObservacoes(perfil.observacoes || "");
+    setFormEmail(perfil.email);
+    setFormSenha(perfil.senha);
+    setModoEdicaoPerfil(false);
+  };
+
+  if (role === null || carregandoPerfil) {
+    return null;
+  }
+
+  return (
+    <div className="p-10 max-w-4xl mx-auto w-full grid gap-6">
+
+      {/* Exibe o perfil do profissional quando o usuário não é administrador */}
+      {role !== "admin" && perfil && (
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2 font-bold text-slate-800">
+              <User size={18} className="text-emerald-600" /> Meu Perfil
+            </div>
+            {/* Mostra os dados normalmente enquanto não estiver editando */}
+            {!modoEdicaoPerfil && (
+              <Button variant="outline" onClick={() => setModoEdicaoPerfil(true)} className="rounded-xl border-slate-200 flex items-center gap-2">
+                <Edit3 size={14} /> Editar
+              </Button>
+            )}
+          </div>
+          {/* Alterna entre visualização e formulário de edição */}
+          {modoEdicaoPerfil ? (
+            <form onSubmit={handleSalvarPerfil} className="grid gap-4 text-left">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label className="text-slate-600">Nome</Label>
+                  <Input value={formNome} onChange={(e) => setFormNome(e.target.value)} required disabled={salvandoPerfil} className="rounded-xl h-11" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-slate-600">Especialidade</Label>
+                  <Input value={formEspecialidade} onChange={(e) => setFormEspecialidade(e.target.value)} required disabled={salvandoPerfil} className="rounded-xl h-11" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label className="text-slate-600">Registro (CRM/CRP/CREFITO...)</Label>
+                  <Input value={formRegistro} onChange={(e) => setFormRegistro(e.target.value)} required disabled={salvandoPerfil} className="rounded-xl h-11" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-slate-600">Email</Label>
+                  <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} required disabled={salvandoPerfil} className="rounded-xl h-11" />
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-slate-600">Senha</Label>
+                <Input type="text" value={formSenha} onChange={(e) => setFormSenha(e.target.value)} required disabled={salvandoPerfil} className="rounded-xl h-11" placeholder="Digite a nova senha" />
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label className="text-slate-600">Observações</Label>
+                <Textarea value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} disabled={salvandoPerfil} className="rounded-xl" />
+              </div>
+
+              <div className="flex gap-3 mt-1">
+                <Button type="submit" disabled={salvandoPerfil} className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white flex-1 h-11 rounded-xl flex items-center justify-center gap-2">
+                  <Save size={16} /> {salvandoPerfil ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+                <Button type="button" variant="outline" disabled={salvandoPerfil} onClick={cancelarEdicaoPerfil} className="flex-1 h-11 rounded-xl">
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          ) : (
+            // Exibe as informações cadastradas do profissional
+            <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Nome</p>
+                  <p className="text-sm text-slate-900 font-normal m-0">{perfil.nome}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                    <Stethoscope size={12} /> Especialidade
+                  </p>
+                  <p className="text-sm text-slate-900 font-normal m-0">{perfil.especialidade}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                    <IdCard size={12} /> Registro
+                  </p>
+                  <p className="text-sm text-slate-900 font-normal m-0">{perfil.registro}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                    <Mail size={12} /> Email
+                  </p>
+                  <p className="text-sm text-slate-900 font-normal m-0">{perfil.email}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                  <Key size={12} /> Senha
+                </p>
+                {/* Oculta a senha exibindo apenas caracteres mascarados */}
+                <p className="text-sm text-slate-900 font-normal m-0">{"•".repeat(perfil.senha.length)}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* encerrar sessão */}
+      <div className="bg-red-50/40 border border-red-100 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 font-bold text-red-900 mb-1">
+            <LogOut size={18} /> Encerrar Sessão
+          </div>
+          <p className="text-red-700/80 text-xs m-0">Isso fechará seu acesso imediato ao painel clínico.</p>
+        </div>
+        <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white font-bold h-11 px-6 rounded-xl flex items-center gap-2 shadow-md w-full sm:w-auto">
+          Sair do Sistema
+        </Button>
+      </div>
+
+    </div>
+  );
+}
