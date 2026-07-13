@@ -1,5 +1,5 @@
 "use client"
-
+// nesse arquivo é a memória global
 import { createContext, useContext, useState, ReactNode } from "react"
 
 interface PacienteAtivo {
@@ -7,31 +7,31 @@ interface PacienteAtivo {
   nome: string
 }
 
-// quais dados e funções podem usar
+// funções que podem usar para obter e mandar os dados
 interface PacienteContextType {
   pacienteAtivo: PacienteAtivo | null
   setPacienteAtivo: (paciente: PacienteAtivo | null) => void
   analiseAtiva: string | null            
   setAnaliseAtiva: (nome: string | null) => void 
-  jobIdAtivo: string | null            //  Adicionado: ID definitivo da análise ativa
-  setJobIdAtivo: (id: string | null) => void //  Adicionado: Função para guardar o ID
+  jobIdAtivo: string | null   
+  setJobIdAtivo: (id: string | null) => void 
 }
 
-// cria os dados que vão ser compartilhados, começa vazia
+// cria a caixa que vai ser compartilhada, começa vazia
 const PacienteContext = createContext<PacienteContextType | undefined>(undefined)
 
+// enche a caixa
 export function PacienteProvider({ children }: { children: ReactNode }) {
   const [pacienteAtivo, setPacienteAtivoState] = useState<PacienteAtivo | null>(null)
   const [analiseAtiva, setAnaliseAtiva] = useState<string | null>(null)
-  const [jobIdAtivo, setJobIdAtivo] = useState<string | null>(null) //  Estado para o ID da análise
+  const [jobIdAtivo, setJobIdAtivo] = useState<string | null>(null) 
 
-  // reseta a análise ativa sempre que o paciente muda (ou é deslogado/null).
+  // reseta a análise ativa sempre que o paciente muda, usuário fez logout ou apagou o paciente.
   const setPacienteAtivo = (paciente: PacienteAtivo | null) => {
     setPacienteAtivoState((pacienteAnterior) => {
-      // Só reseta a análise se o paciente realmente mudou (id diferente)
       if (pacienteAnterior?.id !== paciente?.id) {
         setAnaliseAtiva(null)
-        setJobIdAtivo(null) // Reseta o ID também se mudar de paciente
+        setJobIdAtivo(null) 
       }
       return paciente
     })
@@ -39,13 +39,13 @@ export function PacienteProvider({ children }: { children: ReactNode }) {
 
   return (
     <PacienteContext.Provider 
-      value={{ // distribui para todo mundo
+      value={{ // distribui para todo mundo os dados
         pacienteAtivo, 
         setPacienteAtivo, 
         analiseAtiva, 
         setAnaliseAtiva,
-        jobIdAtivo,    // Compartilha o ID ativo
-        setJobIdAtivo  // Compartilha a função de atualizar o ID
+        jobIdAtivo,   
+        setJobIdAtivo 
       }}
     >
       {children}

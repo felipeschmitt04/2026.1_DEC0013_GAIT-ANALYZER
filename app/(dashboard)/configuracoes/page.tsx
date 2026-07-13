@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePaciente } from "@/app/PacienteContext";
 
+// Busca informações salvas nos cookies do navegador
 function getCookie(nome: string): string | null {
   if (typeof document === "undefined") return null
   const match = document.cookie.match(new RegExp(`(^| )${nome}=([^;]+)`))
@@ -28,7 +29,7 @@ interface Profissional {
 export default function ConfiguracoesPage() {
   const router = useRouter();
   
-  //  ALTERAÇÃO AQUI: Extraímos o setJobIdAtivo do contexto para poder resetá-lo no logout
+  // Funções do contexto usadas para limpar os dados temporários ao sair do sistema
   const { setPacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente();
 
   const [role, setRole] = useState<string | null>(null);
@@ -45,7 +46,6 @@ export default function ConfiguracoesPage() {
   const [formEmail, setFormEmail] = useState("");
   const [formSenha, setFormSenha] = useState("");
 
-  // Controle de Modais (mantidos, mas não usados mais para email/senha do profissional)
   const [modalEmail, setModalEmail] = useState(false);
   const [modalSenha, setModalSenha] = useState(false);
   const [email, setEmail] = useState("usuario@exemplo.com");
@@ -53,6 +53,7 @@ export default function ConfiguracoesPage() {
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
 
+  // vê a permissão do usuário assim que a página é carregada
   useEffect(() => {
     setRole(getCookie("user-role"));
   }, []);
@@ -60,18 +61,19 @@ export default function ConfiguracoesPage() {
   // assim que soubermos a role, se for profissional, busca o perfil dele
   useEffect(() => {
     if (role === null) return; // ainda não leu o cookie
-
+    // Administradores não possuem perfil profissional para editar
     if (role === "admin") {
       setCarregandoPerfil(false);
       return;
     }
-
+    //obtém o cooki user-id
     const userId = getCookie("user-id");
     if (!userId) {
       setCarregandoPerfil(false);
       return;
     }
 
+    // Busca todos os profissionais e filtra apenas o usuário autenticado
     fetch("/api/profissionais")
       .then((res) => res.json())
       .then((lista: Profissional[]) => {
@@ -90,14 +92,14 @@ export default function ConfiguracoesPage() {
       .finally(() => setCarregandoPerfil(false));
   }, [role]);
 
-  //  ALTERAÇÃO AQUI: Logout totalmente seguro que apaga a análise ativa e os dados locais
+  // Encerra a sessão atual e remove dados temporários armazenados no sistema
   const handleLogout = () => {
     if (!confirm("Deseja realmente sair?")) return;
     
     // Reseta toda a memória RAM global do Contexto
     setPacienteAtivo(null);
     setAnaliseAtiva(null);
-    setJobIdAtivo(null); // Limpa o ID da Azure para não vazar no próximo login
+    setJobIdAtivo(null); 
     
     // Limpa os dados salvos no navegador durante as seleções manuais
     localStorage.removeItem("paciente_selecionado");
@@ -113,13 +115,14 @@ export default function ConfiguracoesPage() {
     
     router.push("/login");
   };
-
+  // Envia as alterações do perfil para atualizar os dados no banco
   const handleSalvarPerfil = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil) return;
 
     setSalvandoPerfil(true);
     try {
+      // Atualiza o profissional
       const response = await fetch("/api/profissionais", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -146,7 +149,7 @@ export default function ConfiguracoesPage() {
       setSalvandoPerfil(false);
     }
   };
-
+  // Restaura os valores originais e cancela o modo de edição
   const cancelarEdicaoPerfil = () => {
     if (!perfil) return;
     setFormNome(perfil.nome);
@@ -165,20 +168,21 @@ export default function ConfiguracoesPage() {
   return (
     <div className="p-10 max-w-4xl mx-auto w-full grid gap-6">
 
-      {/* Card de Perfil */}
+      {/* Exibe o perfil do profissional quando o usuário não é administrador */}
       {role !== "admin" && perfil && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2 font-bold text-slate-800">
               <User size={18} className="text-emerald-600" /> Meu Perfil
             </div>
+            {/* Mostra os dados normalmente enquanto não estiver editando */}
             {!modoEdicaoPerfil && (
               <Button variant="outline" onClick={() => setModoEdicaoPerfil(true)} className="rounded-xl border-slate-200 flex items-center gap-2">
                 <Edit3 size={14} /> Editar
               </Button>
             )}
           </div>
-
+          {/* Alterna entre visualização e formulário de edição */}
           {modoEdicaoPerfil ? (
             <form onSubmit={handleSalvarPerfil} className="grid gap-4 text-left">
               <div className="grid grid-cols-2 gap-4">
@@ -223,6 +227,7 @@ export default function ConfiguracoesPage() {
               </div>
             </form>
           ) : (
+            // Exibe as informações cadastradas do profissional
             <div className="grid gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -256,6 +261,7 @@ export default function ConfiguracoesPage() {
                 <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-1">
                   <Key size={12} /> Senha
                 </p>
+                {/* Oculta a senha exibindo apenas caracteres mascarados */}
                 <p className="text-sm text-slate-900 font-normal m-0">{"•".repeat(perfil.senha.length)}</p>
               </div>
             </div>
@@ -263,7 +269,7 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Opção: Encerrar Sessão — aparece sempre, para admin e profissional */}
+      {/* encerrar sessão */}
       <div className="bg-red-50/40 border border-red-100 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 font-bold text-red-900 mb-1">

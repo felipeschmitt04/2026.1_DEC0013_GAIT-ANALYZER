@@ -6,19 +6,19 @@ const ADMIN_SENHA = "admin123";
 
 export async function POST(request: Request) {
   try {
+    //recebe os dados
     const { email, password, loginType } = await request.json();
 
-    // 1. VALIDAÇÃO DE CAMPOS OBRIGATÓRIOS
     if (!email || !password) {
       return NextResponse.json(
         { message: "E-mail e senha são obrigatórios." },
         { status: 400 }
       );
     }
-
+    //tira espaço em branco e deixa tudo minúsculo
     const emailTratado = email.toLowerCase().trim();
 
-    // 2. FLUXO DO ADMINISTRADOR (FIXO)
+    //admin
     if (emailTratado === ADMIN_EMAIL) {
       // Se tentar logar como admin fora da página de admin, exibe erro padrão
       if (loginType !== "admin") {
@@ -36,16 +36,16 @@ export async function POST(request: Request) {
           nome: "Administrador Geral",
         });
 
-        // Configura o cookie de nível de acesso
+        // Configura o cookie user-role
         response.cookies.set("user-role", "admin", {
           path: "/",
-          maxAge: 60 * 60 * 24, // 1 dia
+          maxAge: 60 * 60 * 24, // lembra do acesso por um dia
           httpOnly: false,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
         });
 
-        // Garante a limpeza de qualquer ID de profissional anterior
+        //limpeza de qualquer profissional anterior
         response.cookies.set("user-id", "", { 
           path: "/",
           maxAge: 0,
@@ -53,7 +53,6 @@ export async function POST(request: Request) {
 
         return response;
       } else {
-        // Erro genérico mesmo se errar apenas a senha do admin
         return NextResponse.json(
           { message: "E-mail ou senha incorretos." },
           { status: 401 }
@@ -61,8 +60,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. FLUXO DO PROFISSIONAL (BANCO DE DADOS)
-    // Se um usuário comum tentar usar a rota na página do Admin, barra direto
+    //profissional
+    // Se um usuário comum tentar usar a rota do Admin, barra direto
     if (loginType === "admin") {
       return NextResponse.json(
         { message: "E-mail ou senha incorretos." },
@@ -89,7 +88,7 @@ export async function POST(request: Request) {
       nome: profisional.nome,
     });
     
-    // Configura o cookie com a role do profissional
+    // Configura o cookie user-role
     response.cookies.set("user-role", profisional.role, {
       path: "/",
       maxAge: 60 * 60 * 24,
@@ -98,7 +97,7 @@ export async function POST(request: Request) {
       sameSite: "lax",
     });
 
-    // Configura o cookie com o ID único do profissional
+    // Configura o cookie user-id
     response.cookies.set("user-id", profisional.id, {
       path: "/",
       maxAge: 60 * 60 * 24,

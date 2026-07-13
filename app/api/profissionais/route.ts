@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db"; 
 
-
+//listar
 export async function GET() {
   try {
     const profissionais = await db.profissional.findMany({
+      //apenas os ativos
       where: {
         ativo: true, 
       },
@@ -17,7 +18,7 @@ export async function GET() {
         email: true, 
         senha: true, 
       },
-      orderBy: { nome: "asc" },
+      orderBy: { nome: "asc" },//alfabético
     });
     
     return NextResponse.json(profissionais);
@@ -27,20 +28,46 @@ export async function GET() {
   }
 }
 
-
+//cadastrar
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const { nome, especialidade, registro, email, senha, role, observacoes } = body;
 
+    if (!email || !registro || !nome) {
+      return NextResponse.json({ message: "Nome, e-mail e registro são obrigatórios." }, { status: 400 });
+    }
+
+    const emailTratado = email.toLowerCase().trim();
+
+    // verifica se já existe esse email
+    const emailExistente = await db.profissional.findUnique({
+      where: { email: emailTratado }
+    });
+
+    if (emailExistente) {
+      return NextResponse.json({ message: "Este e-mail já está cadastrado em outra conta." }, { status: 400 });
+    }
+
+    // verifica se já existe esse registro
+    const registroExistente = await db.profissional.findUnique({
+      where: { registro: registro.trim() }
+    });
+
+    if (registroExistente) {
+      return NextResponse.json({ message: "Este registro profissional já está cadastrado no sistema." }, { status: 400 });
+    }
+
+    // cria o profissional
     const novoProfissional = await db.profissional.create({
       data: {
-        nome: body.nome,
-        especialidade: body.especialidade,
-        registro: body.registro,
-        email: body.email,
-        senha: body.senha,
-        role: body.role || "profissional",
-        observacoes: body.observacoes,
+        nome,
+        especialidade,
+        registro: registro.trim(),
+        email: emailTratado,
+        senha,
+        role: role || "profissional",
+        observacoes,
         ativo: true, 
       },
     });
@@ -48,10 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json(novoProfissional, { status: 201 });
   } catch (error: any) {
     console.error("Erro ao criar profissional:", error);
-    return NextResponse.json(
-      { message: "Não foi possível salvar o profissional. Verifique se o registro ou e-mail já existe." },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Erro interno ao salvar o profissional." }, { status: 500 });
   }
 }
 
@@ -65,13 +89,40 @@ export async function PUT(request: Request) {
       return NextResponse.json({ message: "O ID do profissional é obrigatório." }, { status: 400 });
     }
 
+    const emailTratado = email.toLowerCase().trim();
+
+    // verifica se já existe esse email 
+    const emailExistente = await db.profissional.findFirst({
+      where: { 
+        email: emailTratado,
+        NOT: { id: id } //verifica todos exceto o profissional alterado
+      }
+    });
+
+    if (emailExistente) {
+      return NextResponse.json({ message: "Este e-mail já está sendo usado por outro profissional." }, { status: 400 });
+    }
+
+    // verifica se já existe esse registro
+    const registroExistente = await db.profissional.findFirst({
+      where: { 
+        registro: registro.trim(),
+        NOT: { id: id } //verifica todos exceto o profissional alterado
+      }
+    });
+
+    if (registroExistente) {
+      return NextResponse.json({ message: "Este registro profissional já pertence a outro usuário." }, { status: 400 });
+    }
+
+    //atualiza
     const profissionalAtualizado = await db.profissional.update({
       where: { id: id },
       data: {
         nome,
         especialidade,
-        registro,
-        email,
+        registro: registro.trim(),
+        email: emailTratado,
         senha,
         observacoes,
       },
@@ -80,10 +131,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(profissionalAtualizado);
   } catch (error) {
     console.error("Erro ao atualizar profissional:", error);
-    return NextResponse.json(
-      { message: "Erro ao atualizar dados. Verifique se o e-mail ou registro já pertencem a outro usuário." },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Erro interno ao atualizar dados." }, { status: 500 });
   }
 }
 
@@ -96,7 +144,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ message: "O ID do profissional é obrigatório." }, { status: 400 });
     }
 
-    // Altera o status para inativo, bloqueando logins futuros e ocultando da listagem
+    // Altera o status para inativo
     const profissionalDesativado = await db.profissional.update({
       where: { id: id },
       data: { ativo: false },
@@ -104,11 +152,11 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: "Acesso do profissional revogado com sucesso.",
+      message: "Profissional excluído com sucesso.",
       profissional: profissionalDesativado
     });
   } catch (error) {
-    console.error("Erro ao desativar profissional:", error);
-    return NextResponse.json({ message: "Erro ao arquivar profissional." }, { status: 500 });
+    console.error("Erro ao excluir profissional:", error);
+    return NextResponse.json({ message: "Erro ao excluir profissional." }, { status: 500 });
   }
 }

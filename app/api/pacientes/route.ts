@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+//buscar  pacientes
 export async function GET() {
   try {
     const pacientes = await db.paciente.findMany({
@@ -9,7 +10,7 @@ export async function GET() {
       },
       orderBy: { nome: "asc" },
     });
-    
+    // formata as respostas
     const pacientesFormatados = pacientes.map((p: any) => ({
       id: p.id,
       nome: p.nome,
@@ -30,6 +31,7 @@ export async function GET() {
   }
 }
 
+// cadastrar paciente
 export async function POST(request: Request) {
   try {
     const { nome, dataNascimento, cpf, genero, peso, altura, telefone, observacoes, profissionalId, profissionalId: altId } = await request.json();
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
 
     let idDoProfissionalFinal = idEnviado;
 
-    // Se o front não enviou nada ou mandou o ID estático de teste, pegamos o primeiro médico do banco
+    // Se o front não enviou nada, pegamos o primeiro médico do banco, tem que ter um médico para ter paciente
     if (!idDoProfissionalFinal || idDoProfissionalFinal === "id-do-profissional-temporario") {
       const primeiroProfissionalReal = await db.profissional.findFirst();
       
@@ -55,9 +57,10 @@ export async function POST(request: Request) {
       idDoProfissionalFinal = primeiroProfissionalReal.id;
     }
 
-    // Se o front não enviar CPF, geramos um fallback para não travar o banco
+    // Se o front não enviar CPF, aleatorio com tudo em zero para não travar o sistema
     const cpfFinal = cpf && cpf.trim() !== "" ? cpf : `000000000${Math.floor(10 + Math.random() * 89)}`;
-
+   
+    // vê se tem cpf igual
     const cpfExistente = await db.paciente.findUnique({
       where: { cpf: cpfFinal }
     });
@@ -65,16 +68,17 @@ export async function POST(request: Request) {
     if (cpfExistente) {
       return NextResponse.json({ message: "Este CPF já está cadastrado em outro prontuário." }, { status: 400 });
     }
-
+    //transforma em números decimais para ir pro banco
     const pesoFormatado = peso ? parseFloat(peso) : null;
     const alturaFormatada = altura ? parseFloat(altura) : null;
 
+    //cria o paciente no banco
     const novoPaciente = await db.paciente.create({
       data: {
         nome,
         dataNascimento, 
         cpf: cpfFinal,              
-        profissionalId: idDoProfissionalFinal, // Salva com o ID que realmente existe no banco
+        profissionalId: idDoProfissionalFinal, 
         ativo: true, 
         genero: genero || null,
         peso: pesoFormatado,
@@ -100,9 +104,23 @@ export async function PUT(request: Request) {
       return NextResponse.json({ message: "ID, nome e data de nascimento são obrigatórios." }, { status: 400 });
     }
 
+    const cpfFinal = cpf && cpf.trim() !== "" ? cpf : `000000000${Math.floor(10 + Math.random() * 89)}`;
+
+    const cpfExistente = await db.paciente.findFirst({
+      where: {
+        cpf: cpfFinal,
+        NOT: { id: id } 
+      }
+    });
+
+    if (cpfExistente) {
+      return NextResponse.json({ message: "Este CPF já está sendo usado em outro prontuário." }, { status: 400 });
+    }
+
     const pesoFormatado = peso ? parseFloat(peso) : null;
     const alturaFormatada = altura ? parseFloat(altura) : null;
 
+    //atualiza os dados, usa o id como filtro
     const pacienteAtualizado = await db.paciente.update({
       where: { id: id },
       data: {
@@ -132,7 +150,7 @@ export async function PATCH(request: Request) {
     if (!id) {
       return NextResponse.json({ message: "O ID do paciente é obrigatório." }, { status: 400 });
     }
-
+    //altera o campo ativo para false, não deleta do banco
     const pacienteDesativado = await db.paciente.update({
       where: { id: id },
       data: { ativo: false },
@@ -140,12 +158,12 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: "Paciente arquivado com sucesso.",
+      message: "Paciente excluído com sucesso.",
       paciente: pacienteDesativado 
     });
 
   } catch (error) {
-    console.error("Erro ao desativar paciente:", error);
-    return NextResponse.json({ message: "Erro ao arquivar paciente." }, { status: 500 });
+    console.error("Erro ao excluir paciente:", error);
+    return NextResponse.json({ message: "Erro ao excluir paciente." }, { status: 500 });
   }
 }

@@ -1,12 +1,14 @@
-
+# instala as dependências 
 FROM node:20-bookworm-slim AS deps
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
+#copia os arquivos de configurações
 COPY package*.json ./
-RUN npm ci
+# uma versão mais rápida do que o npm install
+RUN npm ci 
 
+#copia o código para o docker
 FROM node:20-bookworm-slim AS builder
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
@@ -14,11 +16,11 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
+#prepara o banco de dados
 RUN npx prisma generate
 RUN npm run build
 
-
+#descarta o que é desnecessário, copia o que é importante e manda para o servidor
 FROM node:20-bookworm-slim AS runner
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 

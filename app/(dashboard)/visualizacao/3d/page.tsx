@@ -21,9 +21,11 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
-// URL base do processamento na Azure
+// URL base do processamento na Azure, o backend
 const API_BASE_URL = "https://52-247-110-87.sslip.io";
 
+// Carrega o motor 3D somente no navegador,
+// pois o Three.js não funciona durante o processamento do servidor, por isso demora um pouco
 const ModelosCanvas = dynamic(() => import("../../components/modelos"), {
   ssr: false,
   loading: () => (
@@ -39,16 +41,15 @@ interface DadosAnalise {
   velocidade: string;
   simetria: string;
 }
-
+// Componente principal responsável por buscar os dados
 function ConteudoVisualizacao() {
-  //  Extraímos o jobIdAtivo nativo do nosso Contexto persistente
   const { pacienteAtivo, analiseAtiva, jobIdAtivo } = usePaciente();
   const [metricas, setMetricas] = useState<DadosAnalise | null>(null);
   const [jsonBiomecanico, setJsonBiomecanico] = useState<any | null>(null);
   const [statusJob, setStatusJob] = useState<string>("loading");
   const [erroMensagem, setErroMensagem] = useState<string | null>(null);
 
-  //  ESTADOS PARA O CONTROLADOR DE REPRODUÇÃO (TIMELINE)
+  //  estados para o controle da animação 3D
   const [frameAtual, setFrameAtual] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
 
@@ -56,12 +57,12 @@ function ConteudoVisualizacao() {
   const segmentoId = searchParams.get("segmento");
   const router = useRouter(); 
   
-  //  SELEÇÃO INTELIGENTE: Se houver ID na URL, prioriza ele. Caso retorne à página sem parâmetros, puxa do Contexto!
+  //  se vier o id ok, senão pega do PacienteContext
   const jobId = searchParams.get("jobId") || jobIdAtivo || "";
   
   const container3dRef = useRef<HTMLDivElement>(null);
 
-  // Efeito para cuidar da telemetria básica do Supabase e do fluxo da Azure
+  // fluxo de carregamento
   useEffect(() => {
     if (!jobId) {
       setErroMensagem("Nenhum identificador de análise foi fornecido.");
@@ -73,7 +74,7 @@ function ConteudoVisualizacao() {
 
     const gerenciarFluxoDados = async () => {
       try {
-        // Passo A: Puxar métricas cadastrais do banco local (Supabase)
+        // puxar dados do banco
         const resLocal = await fetch("/api/analises");
         if (resLocal.ok) {
           const lista = await resLocal.json();
@@ -88,7 +89,7 @@ function ConteudoVisualizacao() {
           }
         }
 
-        // Passo B: Fazer o Polling na Azure para garantir que o processamento terminou
+        // polling na Azure para garantir que o processamento terminou
         const STATUS_FINAIS = new Set(["completed", "failed", "failed_retryable"]);
         
         while (!encerrarPolling) {
@@ -100,7 +101,7 @@ function ConteudoVisualizacao() {
 
           if (STATUS_FINAIS.has(jobInfo.status)) {
             if (jobInfo.status === "completed") {
-              // Passo C: Se completou, baixa o JSON biomecânico pesado
+              // se completou, baixa o JSON biomecânico completo
               const resResultado = await fetch(`${API_BASE_URL}/results/${jobId}`);
               if (resResultado.ok) {
                 const dadosFinais = await resResultado.json();
@@ -135,22 +136,22 @@ function ConteudoVisualizacao() {
     };
   }, [jobId]);
 
-  // CRONÔMETRO DE SINCRONIZAÇÃO DA TIMELINE (Controlado pelo React)
+  // controla automaticamente a passagem dos frames
   useEffect(() => {
     if (!jsonBiomecanico || !isPlaying) return;
 
     const totalFrames = jsonBiomecanico.pose3d?.length || 1;
-    const fpsOriginal = jsonBiomecanico.input_summary?.fps || 30;
+    const fpsOriginal = jsonBiomecanico.input_summary?.fps || 30;//frames por segundo, controla a velocidade aqui
 
     const relogio = setInterval(() => {
-      setFrameAtual((prev) => (prev + 1) % totalFrames);
-    }, 1000 / fpsOriginal);
+      setFrameAtual((prev) => (prev + 1) % totalFrames);//passa os frames
+    }, 1000 / fpsOriginal);// tempo em que cada frame fica
 
-    return () => clearInterval(relogio);
+    return () => clearInterval(relogio);//usuário para
   }, [jsonBiomecanico, isPlaying]);
 
   const totalFramesDisponiveis = jsonBiomecanico?.pose3d?.length || 1;
-
+  //modo tela cheia
   const handleToggleFullscreen = () => {
     if (!container3dRef.current) return;
     if (!document.fullscreenElement) {
@@ -162,31 +163,32 @@ function ConteudoVisualizacao() {
     }
   };
 
-  // --- ENGENHARIA DE DADOS BIOMECÂNICOS DINÂMICOS ---
+  //transforma radianos em graus, para exibir os ângulos
   const radParaGraus = (valorRad: number | null) => {
     if (valorRad == null) return "0";
     return (valorRad * 180 / Math.PI).toFixed(1);
   };
-
+  //pega os ângulos especificos de cada parte
   const pegarValorFitting = (nomeCoordenada: string) => {
     const fitting = jsonBiomecanico?.fitting;
     if (!fitting) return null;
     const index = fitting.coordinate_names?.indexOf(nomeCoordenada);
     if (index < 0 || index == null) return null;
+    // o ângulo específico no frame atual
     return fitting.angles?.[frameAtual]?.[index] ?? null;
   };
 
-  // Criação dos fallbacks de carregamento padrão
+  // Valores exibidos enquanto a análise ainda está carregando
   let cardsDinamicos = [
-    { label: "Cadência", value: metricas?.cadencia || "0", unit: "passos/min", icon: Activity },
-    { label: "Comprimento do Passo", value: metricas?.comprimento || "0", unit: "m", icon: Ruler },
-    { label: "Velocidade", value: metricas?.velocidade || "0", unit: "m/s", icon: Activity },
-    { label: "Simetria", value: metricas?.simetria || "0", unit: "%", icon: CheckCircle2 },
+    { label: "", value: "", unit: "", icon: Activity },
+    { label: "", value: "", unit: "", icon: Ruler },
+    { label: "", value: "", unit: "", icon: Activity },
+    { label: "", value: "", unit: "", icon: CheckCircle2 },
   ];
 
-  // Injeção de telemetria real dependendo do segmento corporal ativo
+  
   const estaAguardando = ["loading", "queued", "claimed", "running", "processing"].includes(statusJob);
-
+  // texto dinâmico exibido 
   if (!estaAguardando && jsonBiomecanico) {
     const clinicas = jsonBiomecanico.metricas_clinicas;
 
@@ -294,9 +296,10 @@ function ConteudoVisualizacao() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-white">
       
-      {/* CABEÇALHO */}
+      {/* cabeçalho */}
       <div className="p-8 pb-4 flex justify-between items-end">
         <div className="flex items-start gap-4">
+          {/* botão voltar */}
           <button 
             onClick={() => router.back()}
             className="mt-1 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 p-2.5 rounded-xl text-slate-600 transition-all active:scale-95 shadow-sm"
@@ -320,59 +323,87 @@ function ConteudoVisualizacao() {
         </div>
       </div>
 
-      {/* CONTEÚDO DIVIDIDO (50/50) */}
+      {/* divisão*/}
       <div className="flex-1 flex p-8 pt-2 gap-8 min-h-0">
         
-        {/* LADO ESQUERDO: METRICAS DINÂMICAS */}
+        {/* lado esquerdo */}
         <div className="w-1/2 flex flex-col gap-6 overflow-y-auto pr-4 custom-scrollbar">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
             <Info className="size-5 text-emerald-600" />
             Métricas Biomecânicas
           </h2>
+          {/* cards com os dados */}
+          <div className="grid gap-4">
+            {cardsDinamicos.map((item, i) => (
+              <div 
+                key={i} 
+                className="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-between"
+              >
 
-          {estaAguardando ? (
-            <div className="py-20 flex flex-col items-center justify-center gap-4 text-slate-400 font-medium">
-              <Loader2 className="animate-spin text-emerald-600 size-10" />
-              <p className="animate-pulse text-sm">
-                Servidor Azure processando a marcha... Estado: <span className="font-bold text-emerald-600 uppercase">{statusJob}</span>
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {cardsDinamicos.map((item, i) => (
-                <div key={i} className="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-between">
+                {estaAguardando ? (
+                  // Mostra um carregamento visual enquanto a IA processa os dados
+                  <div className="flex items-center gap-4 w-full animate-pulse">
+                    
+                    {/* Ícone borrado */}
+                    <div className="bg-slate-200 w-12 h-12 rounded-xl"></div>
+
+                    {/* Texto borrado */}
+                    <div className="flex flex-col gap-2">
+                      <div className="bg-slate-200 h-3 w-36 rounded"></div>
+                      <div className="bg-slate-200 h-7 w-20 rounded"></div>
+                    </div>
+
+                  </div>
+                ) : (
+                  // Exibe as métricas reais após o processamento terminar
                   <div className="flex items-center gap-4">
+                    
                     <div className="bg-white p-3 rounded-xl shadow-sm">
                       <item.icon className="size-6 text-emerald-600" />
                     </div>
+
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {item.label}
+                      </p>
+
                       <p className="text-2xl font-bold text-slate-800">
-                        {item.value} <span className="text-sm font-normal text-slate-500">{item.unit}</span>
+                        {item.value}{" "}
+                        <span className="text-sm font-normal text-slate-500">
+                          {item.unit}
+                        </span>
                       </p>
                     </div>
+
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+
+              </div>
+            ))}
+          </div>
+
 
           <div className="mt-auto p-6 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-            <h3 className="font-bold text-emerald-900 mb-1">Foco Ativo</h3>
+            <h3 className="font-bold text-emerald-900 mb-1">
+              Foco Ativo
+            </h3>
+
             <p className="text-emerald-700 text-sm capitalize">
-              Isolamento biomecânico: <strong className="font-bold">{segmentoId?.replace("-", " ")}</strong>
+              Isolamento biomecânico:{" "}
+              <strong className="font-bold">
+                {segmentoId?.replace("-", " ")}
+              </strong>
             </p>
           </div>
         </div>
-
-        {/* LADO DIREITO: MODELO 3D + BARRA DE REPRODUÇÃO ABAIXO */}
+        {/* lado direito */}
         <div className="w-1/2 flex flex-col gap-4 min-h-0">
           
-          {/* Quadrado do Modelo 3D */}
+          {/* quadrado modelo 3d */}
           <div 
             ref={container3dRef} 
             className="flex-1 relative bg-slate-900 rounded-[2.5rem] shadow-2xl border-8 border-slate-800 overflow-hidden"
-          >
+          >{/* fundo quadriculado do quadrado */}
             <div 
               className="absolute inset-0 opacity-10 pointer-events-none" 
               style={{ 
@@ -393,6 +424,7 @@ function ConteudoVisualizacao() {
             </div>
 
             <div className="absolute bottom-6 right-6 z-20">
+              {/* botão tela cheia */}
               <button 
                 type="button" 
                 onClick={handleToggleFullscreen}
@@ -404,13 +436,14 @@ function ConteudoVisualizacao() {
             </div>
           </div>
 
-          {/* LAYOUT DA TIMELINE PLAYER */}
+          {/* timeline */}
           {!estaAguardando && jsonBiomecanico && (
             <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col gap-3 shadow-xl text-slate-300">
               <div className="flex items-center gap-4">
                 
-                {/* Botões de Mídia */}
+                
                 <div className="flex items-center gap-1.5">
+                  {/* Botão voltar */}
                   <button 
                     onClick={() => setFrameAtual((prev) => (prev - 1 + totalFramesDisponiveis) % totalFramesDisponiveis)}
                     className="hover:bg-slate-800 p-2 rounded-lg text-slate-400 hover:text-white active:scale-95 transition-all"
@@ -419,6 +452,7 @@ function ConteudoVisualizacao() {
                     <SkipBack size={18} />
                   </button>
                   
+                  {/* Botão pausar;despausar */}
                   <button 
                     onClick={() => setIsPlaying(!isPlaying)}
                     className="bg-emerald-600 hover:bg-emerald-500 p-2.5 rounded-xl text-white transition-transform active:scale-95 shadow-md shadow-emerald-900/30"
@@ -427,6 +461,7 @@ function ConteudoVisualizacao() {
                     {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
                   </button>
                   
+                  {/* Botão avançar */}
                   <button 
                     onClick={() => setFrameAtual((prev) => (prev + 1) % totalFramesDisponiveis)}
                     className="hover:bg-slate-800 p-2 rounded-lg text-slate-400 hover:text-white active:scale-95 transition-all"
@@ -436,7 +471,7 @@ function ConteudoVisualizacao() {
                   </button>
                 </div>
 
-                {/* Slider (Barra de Arrastar) */}
+                {/* Slider */}
                 <input 
                   type="range" 
                   min={0} 
@@ -449,7 +484,7 @@ function ConteudoVisualizacao() {
                   className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 outline-none"
                 />
 
-                {/* Indicador Numérico de Posição */}
+                {/* número do frame */}
                 <span className="font-mono text-xs text-slate-400 whitespace-nowrap bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
                   Frame: <strong className="text-emerald-400">{frameAtual + 1}</strong> / {totalFramesDisponiveis}
                 </span>
@@ -465,6 +500,7 @@ function ConteudoVisualizacao() {
   );
 }
 
+// Exportação padrão envolvendo a página com Suspense
 export default function Visualizacao3DPage() {
   return (
     <ProtecaoPaciente>

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
-// manda a raiz para o login
+// manda a raiz para o login, geralmente quando inicia o código
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: 'standalone',// otimiza o tamanho do projeto
   async redirects() {
     return [
       {

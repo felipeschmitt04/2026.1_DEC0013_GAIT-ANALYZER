@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-
+//url do servidor do back
 const API_BASE_URL = "https://52-247-110-87.sslip.io";
 
+// criar nova análise
 export async function POST(request: Request) {
   try {
-    // 1. Como recebemos um arquivo, usamos request.formData() em vez de request.json()
+    //ler os arquivos e dados enviados e guarda
     const formData = await request.formData(); 
     
     const file = formData.get("video") as File | null;
@@ -14,18 +15,18 @@ export async function POST(request: Request) {
     const nome = formData.get("nome") as string | null;
     const pacienteId = formData.get("pacienteId") as string | null;
 
-    // Validação de segurança básica
+    // vê se não esqueceu nada
     if (!file || !heightMm || !nome || !pacienteId) {
       return NextResponse.json({ message: "Dados obrigatórios ausentes no upload." }, { status: 400 });
     }
 
-    // 2. Montamos o pacote exatamente como o backend na Azure exige
+    // monta o pacote exatamente como o backend na Azure exige
     const backendFormData = new FormData();
     backendFormData.append("video", file);
     backendFormData.append("height_mm", heightMm);
     backendFormData.append("rotated", rotated || "false");
 
-    // 3. Disparamos o vídeo para a Azure começar o processamento pesado
+    // envia o vídeo para o backend
     const azureResponse = await fetch(`${API_BASE_URL}/analyze`, {
       method: "POST",
       body: backendFormData,
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "O servidor de processamento (Azure) recusou o vídeo." }, { status: 502 });
     }
 
-    // Pegamos a resposta da Azure contendo o job_id
+    // pega a resposta da Azure contendo o job_id
     const azureData = await azureResponse.json();
     const jobId = azureData.job?.job_id;
 
@@ -44,16 +45,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Não foi possível resgatar o ID de processamento." }, { status: 500 });
     }
 
-    // 4. Data atual para registrar no histórico do Supabase
+    // Data atual para registrar no banco
     const hojeStr = new Date().toISOString().split("T")[0];
 
-    // 5. Inserimos a nova análise no Prisma/Supabase usando o ID gerado pelo backend
+    // salva a análise no banco 
     const novaAnalise = await db.analise.create({
       data: {
-        id: jobId, // Importante: amarramos o ID do histórico local com o id do job da Azure!
+        id: jobId, //id do banco igual o da Azure
         nome,
         data: hojeStr, 
-        videoUrl: file.name, // Apenas para guardar a referência do nome do arquivo original
+        videoUrl: file.name, // apenas para guardar a referência do nome do arquivo original
         cadencia: "0",      
         comprimento: "0",
         velocidade: "0",
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Devolvemos o job_id para o frontend poder redirecionar para a tela de visualização
+    // sucesso, manda os dados necesários para o front
     return NextResponse.json({ success: true, job_id: novaAnalise.id }, { status: 201 });
 
   } catch (error: any) {

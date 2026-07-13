@@ -26,29 +26,31 @@ interface Profissional {
 }
 
 export default function ProfissionaisPage() {
+  //estados e controles da tela
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [profissionalSelecionado, setProfissionalSelecionado] = useState<Profissional | null>(null)
   const [modoEdicao, setModoEdicao] = useState(false)
   const [profissionais, setProfissionais] = useState<Profissional[]>([])
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
-  
+  //estados para a busca e a paginação
   const [busca, setBusca] = useState("")
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const itensPorPagina = 3
-
+  const itensPorPagina = 12
+  //estados para os campos do formulário
   const [formNome, setFormNome] = useState("")
   const [formEspecialidade, setFormEspecialidade] = useState("")
   const [formRegistro, setFormRegistro] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formSenha, setFormSenha] = useState("")
   const [formObservacoes, setFormObservacoes] = useState("")
-
+  //carrega imediatamente a listagem
   useEffect(() => {
     carregarProfissionais();
   }, []);
-
+  //monitora a tela a todo instante
   useEffect(() => {
+    //altera os dados conforme o profisional selecionado
     if (profissionalSelecionado && modoEdicao) {
       setFormNome(profissionalSelecionado.nome)
       setFormEspecialidade(profissionalSelecionado.especialidade)
@@ -57,6 +59,7 @@ export default function ProfissionaisPage() {
       setFormSenha(profissionalSelecionado.senha || "admin123")
       setFormObservacoes(profissionalSelecionado.observacoes || "")
     } else if (!showModalCadastro) {
+      //reseta tudo quando fecha, para não restar nada do profissional passado
       setFormNome("")
       setFormEspecialidade("")
       setFormRegistro("")
@@ -66,6 +69,8 @@ export default function ProfissionaisPage() {
     }
   }, [profissionalSelecionado, modoEdicao, showModalCadastro]);
 
+  //api
+  //traz a  lista do banco
   const carregarProfissionais = async () => {
     try {
       setLoading(true);
@@ -80,35 +85,35 @@ export default function ProfissionaisPage() {
       setLoading(false);
     }
   };
-
+  //filtra a lista com base no que foi digitado
   const filtrados = profissionais.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
   )
-
+  //organiza a lista em ordem alfabética
   const ordenados = [...filtrados].sort((a, b) =>
     a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
   )
-
+  // calcula a paginação, pra deixar de 12 em 12
   const totalPaginas = Math.ceil(ordenados.length / itensPorPagina)
   const indiceUltimo = paginaAtual * itensPorPagina
   const indicePrimeiro = indiceUltimo - itensPorPagina
   const exibidos = ordenados.slice(indicePrimeiro, indiceUltimo)
-
+  //pega a busca que fez de usuário e joga para a página 1, pois lá vai estar o uruário filtrado
   const handleBusca = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBusca(e.target.value)
     setPaginaAtual(1)
   }
-
+  //impede números e símbolos no nome
   const handleNomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const apenasLetras = e.target.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, "");
     setFormNome(apenasLetras);
   }
-
+  //impede números e símbolos na especialidade
   const handleEspecialidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const apenasLetras = e.target.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, "");
     setFormEspecialidade(apenasLetras);
   }
-
+  //cadastrar profissional
   const handleSaveNovo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSalvando(true)
@@ -122,7 +127,7 @@ export default function ProfissionaisPage() {
       role: "profissional",
       observacoes: formObservacoes.trim() || null,
     }
-
+    //manda api
     try {
       const response = await fetch("/api/profissionais", {
         method: "POST",
@@ -136,7 +141,7 @@ export default function ProfissionaisPage() {
         throw new Error(data.message || "Erro ao criar credenciais.");
       }
 
-      carregarProfissionais() 
+      carregarProfissionais() //agora atualizada com o novo funcionário
       setShowModalCadastro(false)
       alert(`Profissional cadastrado! Acesso liberado.`);
     } catch (err: any) {
@@ -145,7 +150,7 @@ export default function ProfissionaisPage() {
       setSalvando(false)
     }
   }
-
+  //alterar profissional
   const handleUpdateProfissional = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!profissionalSelecionado) return
@@ -161,7 +166,7 @@ export default function ProfissionaisPage() {
       senha: formSenha,
       observacoes: formObservacoes.trim() || null,
     }
-
+    //manda api
     try {
       const response = await fetch("/api/profissionais", {
         method: "PUT",
@@ -184,12 +189,12 @@ export default function ProfissionaisPage() {
       setSalvando(false)
     }
   }
-
+  //deletar profissional
   const handleDesativarProfissional = async (id: string, nome: string) => {
     if (!confirm(`Tem certeza de que deseja remover o acesso de ${nome}? Ele não poderá mais fazer login.`)) {
       return
     }
-
+    //manda api
     try {
       const response = await fetch("/api/profissionais", {
         method: "PATCH",
@@ -210,13 +215,13 @@ export default function ProfissionaisPage() {
   return (
     <div style={{ padding: '24px', position: 'relative' }}>
       
-      {/* CABEÇALHO */}
+      {/* cabeçalho */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', gap: '12px' }}>
         <div style={{ flex: '0 0 auto' }}>
           <h2 style={{ fontSize: '30px', fontWeight: 'bold', color: '#0f172a', margin: 0, lineHeight: '1.2' }}>Profissionais</h2>
           <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Gerencie o acesso dos profissionais de saúde.</p>
         </div>
-
+        {/* filtro */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 20px' }}>
           <div style={{ position: 'relative', width: '100%', maxWidth: '450px' }}>
             <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', zIndex: 10 }} />
@@ -228,30 +233,37 @@ export default function ProfissionaisPage() {
             />
           </div>
         </div>
-
+        {/* botão novo profissional */}
         <Button onClick={() => setShowModalCadastro(true)} style={{ height: '48px', paddingLeft: '24px', paddingRight: '24px' }} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg transition-all active:scale-95 font-semibold">
           <Plus className="size-5 mr-2" /> Novo Profissional
         </Button>
       </div>
 
-      {/* LISTA DE CARDS */}
+      {/* lista de cards */}
+      {/* enquanto busca na api */}
       {loading ? (
         <div className="py-20 text-center text-slate-500 font-medium animate-pulse">Carregando dados dos profissionais...</div>
       ) : (
+        //local onde fica os cards
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
           {exibidos.length > 0 ? (
-            exibidos.map((p) => (
+            exibidos.map((p) => ( 
               <div 
+              //card do profissional que aparece
                 key={p.id} 
+                //clicar no card
                 onClick={() => { setProfissionalSelecionado(p); setModoEdicao(false); }}
                 style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.2s', cursor: 'pointer' }} 
                 className="hover:border-emerald-200 hover:shadow-md active:scale-95"
               >
+                {/* simbolo do boneco */}
                 <div style={{ backgroundColor: '#f8fafc', minWidth: '50px', height: '50px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <User size={22} className="text-slate-600" />
                 </div>
                 <div style={{ overflow: 'hidden' }}>
+                  {/* nome */}
                   <h3 style={{ fontWeight: 'bold', color: '#1e293b', margin: 0, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome}</h3>
+                  {/* especialidade e registro */}
                   <div style={{ display: 'flex', gap: '10px', marginTop: '2px' }}>
                     <span style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}><Briefcase size={12} /> {p.especialidade}</span>
                     <span style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}><IdCard size={12} /> {p.registro}</span>
@@ -267,19 +279,21 @@ export default function ProfissionaisPage() {
         </div>
       )}
 
-      {/* PAGINAÇÃO */}
+      {/* paginação */}
+      {/* só aparece se tiver cards pra duas páginas */}
       {totalPaginas > 1 && (
         <div style={{ marginTop: '32px' }}>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
+                {/* botão anterior */}
                 <PaginationPrevious 
                   href="#" 
                   onClick={(e) => { e.preventDefault(); if (paginaAtual > 1) setPaginaAtual(paginaAtual - 1); }} 
-                  className={paginaAtual === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"}
+                  className={paginaAtual === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"} // desativa se for primeira página
                 />
               </PaginationItem>
-              
+              {/* array com as páginas */}
               {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((i) => (
                 <PaginationItem key={i}>
                   <PaginationLink 
@@ -288,12 +302,13 @@ export default function ProfissionaisPage() {
                     onClick={(e) => { e.preventDefault(); setPaginaAtual(i); }}
                     className={paginaAtual === i ? "bg-slate-950 hover:bg-slate-900 text-white font-medium" : "cursor-pointer"}
                   >
-                    {i}
+                    {i} {/* página atual */}
                   </PaginationLink>
                 </PaginationItem>
               ))}
 
               <PaginationItem>
+                {/* botão próximo */}
                 <PaginationNext 
                   href="#" 
                   onClick={(e) => { e.preventDefault(); if (paginaAtual < totalPaginas) setPaginaAtual(paginaAtual + 1); }} 
@@ -305,13 +320,16 @@ export default function ProfissionaisPage() {
         </div>
       )}
 
-      {/* MODAL CADASTRO */}
+      {/* modal cadastro */}
       {showModalCadastro && (
+        // fundo e clique fora sai
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
           <div onClick={() => !salvando && setShowModalCadastro(false)} style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(8px)' }} />
+          {/* caixa branca */}
           <div style={{ position: 'relative', backgroundColor: 'white', width: '100%', maxWidth: '460px', borderRadius: '24px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             <button type="button" disabled={salvando} onClick={() => setShowModalCadastro(false)} style={{ position: 'absolute', top: '20px', right: '20px', color: '#94a3b8' }}><X size={20} /></button>
             <form onSubmit={handleSaveNovo}>
+          {/* os dados */}
               <div className="grid gap-4 text-left">
                 <h3 className="text-xl font-bold text-slate-950">Cadastrar Profissional</h3>
                 
@@ -352,7 +370,7 @@ export default function ProfissionaisPage() {
                   <label className="text-sm font-medium text-slate-700">Observações</label>
                   <Textarea name="observacoes" value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} disabled={salvando} style={{ minHeight: '60px' }} className="rounded-xl" />
                 </div>
-
+                {/* botões */}
                 <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                   <Button type="submit" disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 flex-1 h-12 rounded-xl font-bold text-white transition-all active:scale-95 disabled:opacity-50">
                     {salvando ? "Gravando na Nuvem..." : "Confirmar Cadastro"}
@@ -365,16 +383,20 @@ export default function ProfissionaisPage() {
         </div>
       )}
 
-      {/* MODAL DETALHES (FICHA / ALTERAÇÃO) */}
+      {/* modal detalhes */}
       {profissionalSelecionado && (
+        //fundo e clique fora sai
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '12px' }}>
           <div onClick={() => !salvando && setProfissionalSelecionado(null)} style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(8px)' }} />
+          {/* caixa branca */}
           <div style={{ position: 'relative', backgroundColor: 'white', width: '100%', maxWidth: '440px', borderRadius: '24px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            {/* botão fechar no canto */}
             <button type="button" disabled={salvando} onClick={() => setProfissionalSelecionado(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: '#94a3b8' }}><X size={20} /></button>
-            
+            {/* parte de atualização */}
             <form onSubmit={handleUpdateProfissional}>
               <div className="grid gap-4 text-left">
                 <div className="flex items-center gap-2">
+                  {/* botão voltar do modo edição */}
                   {modoEdicao && (
                     <button type="button" onClick={() => setModoEdicao(false)} className="text-slate-500 hover:text-slate-700 mr-1">
                       <ArrowLeft size={18} />
@@ -385,7 +407,7 @@ export default function ProfissionaisPage() {
                   </h3>
                 </div>
                 
-                {/* CAMPO NOME */}
+                {/* nome */}
                 <div className="border-b pb-2">
                   <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Nome</p>
                   {modoEdicao ? (
@@ -397,7 +419,7 @@ export default function ProfissionaisPage() {
                   )}
                 </div>
 
-                {/* GRID ESPECIALIDADE E REGISTRO */}
+                {/* especialidade e registro */}
                 <div className="grid grid-cols-2 gap-3 border-b pb-2">
                   <div>
                     <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Especialidade</p>
@@ -421,7 +443,7 @@ export default function ProfissionaisPage() {
                   </div>
                 </div>
 
-                {/* SEÇÃO DE CREDENCIAIS */}
+                {/* email e senha */}
                 <div className="grid grid-cols-2 gap-3 border-b pb-2">
                   <div>
                     <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">E-mail</p>
@@ -443,7 +465,7 @@ export default function ProfissionaisPage() {
                   </div>
                 </div>
 
-                {/* CAMPO OBSERVAÇÕES */}
+                {/* observações */}
                 <div>
                   <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Observações Internas</p>
                   {modoEdicao ? (
@@ -457,8 +479,8 @@ export default function ProfissionaisPage() {
                   )}
                 </div>
 
-                {/* BOTÕES DE AÇÃO */}
-                {modoEdicao ? (
+                {/* botão de baixo */}
+                {modoEdicao ? ( // se estiver no modo edição apenas botão confirmar senão divide em botão de apagar profissional e ir para edição
                   <Button type="submit" disabled={salvando} className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl mt-2 flex items-center justify-center gap-2 transition-all active:scale-95">
                     <Save size={16} /> {salvando ? "Salvando Alterações..." : "Salvar Alterações"}
                   </Button>

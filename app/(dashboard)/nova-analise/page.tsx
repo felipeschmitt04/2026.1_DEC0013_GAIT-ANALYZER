@@ -12,21 +12,21 @@ import { cn } from "@/lib/utils";
 export default function NovaAnalisePage() {
   const { pacienteAtivo, setAnaliseAtiva, setJobIdAtivo } = usePaciente(); 
   const router = useRouter();
-  
+  // Estados responsáveis pelo controle do formulário
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [nomeAnalise, setNomeAnalise] = useState("");
-  const [alturaCm, setAlturaCm] = useState(""); // Novo campo de altura em cm
+  const [alturaCm, setAlturaCm] = useState(""); 
   const [enviando, setEnviando] = useState(false);
   
   const [orientacao, setOrientacao] = useState<"em-pe" | "deitado">("em-pe");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  // Abre o seletor de arquivos
   const onButtonClick = () => {
     fileInputRef.current?.click();
   };
-
+// Controla o comportamento visual quando o usuário arrasta
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -36,7 +36,7 @@ export default function NovaAnalisePage() {
       setDragActive(false);
     }
   };
-
+  // Valida se o arquivo enviado é MP4
   const validarArquivo = (arquivo: File) => {
     if (arquivo.type === "video/mp4") {
       setFile(arquivo);
@@ -45,7 +45,7 @@ export default function NovaAnalisePage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
-
+  //arquivo solto dentro do upload
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -54,14 +54,14 @@ export default function NovaAnalisePage() {
       validarArquivo(e.dataTransfer.files[0]);
     }
   };
-
+  //clica no botão de upload
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       validarArquivo(e.target.files[0]);
     }
   };
-
+  //remove o vídeo selecionado
   const removeFile = (e: React.MouseEvent) => {
     e.stopPropagation();
     setFile(null);
@@ -78,13 +78,13 @@ export default function NovaAnalisePage() {
     try {
       setEnviando(true);
 
-      // Converte a altura de centímetros para milímetros (Ex: 175cm -> 1750mm)
+      // Converte a altura de centímetros para milímetros 
       const heightMm = Math.round(parseFloat(alturaCm) * 10);
       
       // Define a rotação com base na orientação selecionada
       const rotated = orientacao === "deitado";
 
-      // Cria o FormData necessário para upload de arquivos na API do backend
+      // Cria o Formulário de envio para a API interna
       const formData = new FormData();
       formData.append("video", file); // Arquivo de vídeo real
       formData.append("height_mm", String(heightMm)); // Altura em mm exigida pelo backend
@@ -92,10 +92,10 @@ export default function NovaAnalisePage() {
       formData.append("nome", nomeAnalise);
       formData.append("pacienteId", pacienteAtivo.id);
 
-      // Dispara a requisição para a sua rota interna da API Next.js
+      // Api
       const resAnalise = await fetch("/api/analises", {
         method: "POST",
-        body: formData, // Envia o formData completo ao invés do JSON string
+        body: formData, 
       });
 
       if (resAnalise.ok) {
@@ -104,10 +104,10 @@ export default function NovaAnalisePage() {
         // Define o nome da análise ativa no contexto
         setAnaliseAtiva(nomeAnalise); 
         
-        //  ALTERAÇÃO AQUI: Salva o ID retornado pelo servidor no Contexto Global na mesma hora
+        // Salva o ID retornado pelo servidor no PacienteContext
         setJobIdAtivo(dadosJob.job_id || null);
         
-        // Redireciona para a tela de visualização passando o id do processamento (job_id)
+        // Redireciona para a tela de visualização passando o id 
         router.push(`/visualizacao?jobId=${dadosJob.job_id || ""}`);
       } else {
         alert("Erro ao salvar e iniciar a análise no servidor.");
@@ -122,6 +122,7 @@ export default function NovaAnalisePage() {
 
   return (
     <ProtecaoPaciente>
+      {/* cabeçalho */}
       <div className="p-10 max-w-5xl mx-auto">
         <div className="flex flex-col mb-8">
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
@@ -132,7 +133,7 @@ export default function NovaAnalisePage() {
           </p>
         </div>
 
-        {/* ÁREA DE UPLOAD */}
+        {/* área de upload */}
         <div
           className={cn(
             "relative w-full h-[400px] border-2 border-dashed rounded-3xl transition-all flex flex-col items-center justify-center gap-4 cursor-pointer",
@@ -157,6 +158,7 @@ export default function NovaAnalisePage() {
           />
 
           {file && (
+            // remover vídeo selecionado
             <button 
               type="button"
               onClick={(e) => {
@@ -170,7 +172,7 @@ export default function NovaAnalisePage() {
               <X size={24} />
             </button>
           )}
-
+          {/* texto */}
           {!file ? (
             <div className="flex flex-col items-center gap-4">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -186,6 +188,7 @@ export default function NovaAnalisePage() {
               </div>
             </div>
           ) : (
+            // vídeo carregado
             <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
               <div className="bg-emerald-50 p-8 rounded-3xl border border-emerald-100">
                 <FileVideo className="size-20 text-emerald-600" />
@@ -200,7 +203,7 @@ export default function NovaAnalisePage() {
           )}
         </div>
 
-        {/* CAMPOS ADICIONAIS: NOME E ALTURA */}
+        {/* nome e altura */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative group md:col-span-2">
             <Tag className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
@@ -226,7 +229,7 @@ export default function NovaAnalisePage() {
           </div>
         </div>
 
-        {/* RODAPÉ: SELETOR DE ORIENTAÇÃO E BOTÃO DE ENVIO */}
+        {/* orientação e envio */}
         <div className="mt-4 flex items-center justify-end gap-4 bg-white p-2 rounded-2xl shadow-sm">
           <Button
             type="button"

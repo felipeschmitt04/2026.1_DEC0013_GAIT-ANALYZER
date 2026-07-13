@@ -1,9 +1,9 @@
 // gera pacotes
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "debian-openssl-3.0.x"] // pra funcionar tanto no pc quanto no docker
 }
-// motor, e aonde está endereço e senha
+// motor, puxa o endereço e senha do .env
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

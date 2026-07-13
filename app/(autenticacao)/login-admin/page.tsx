@@ -13,13 +13,14 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  // tenta entrar como admin
   const entrarComoAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      //chama api
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,7 +32,7 @@ export default function AdminLoginPage() {
       if (!response.ok) {
         throw new Error(data.message || "Erro ao fazer login administrativo.");
       }
-
+      // só passa se for admin
       if (data.role === "admin") {
         router.push("/admin/profissionais");
       } else {
@@ -45,13 +46,18 @@ export default function AdminLoginPage() {
   };
 
   return (
+    //centraliza na tela
     <div className="flex h-screen w-full items-center justify-center px-4">
+      {/* formulário de autenticação */}
       <Card className="mx-auto max-w-sm border-emerald-100 shadow-lg rounded-2xl">
+        {/* Cabeçalho */}
         <CardHeader>
           <CardTitle className="text-2xl text-emerald-800 font-bold tracking-tight">Admin Login</CardTitle>
           <CardDescription>Acesse o painel administrativo para gerenciar profissionais.</CardDescription>
         </CardHeader>
+        {/* Conteúdo do card */}
         <CardContent>
+          {/* Formulário responsável pelo envio dos dados */}
           <form onSubmit={entrarComoAdmin} className="grid gap-4">
             
             {error && (
@@ -59,7 +65,7 @@ export default function AdminLoginPage() {
                 {error}
               </div>
             )}
-
+            {/* e-mail */}
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-slate-700">Email Administrativo</Label>
               <Input
@@ -73,6 +79,7 @@ export default function AdminLoginPage() {
                 className="rounded-xl border-slate-200"
               />
             </div>
+            {/* senha */}
             <div className="grid gap-2">
               <Label htmlFor="password" className="text-slate-700">Senha</Label>
               <Input 
@@ -85,6 +92,7 @@ export default function AdminLoginPage() {
                 className="rounded-xl border-slate-200"
               />
             </div>
+            {/* Botão enviar */}
             <Button 
               type="submit" 
               disabled={loading}
@@ -92,7 +100,7 @@ export default function AdminLoginPage() {
             >
               {loading ? "Carregando Painel..." : "Entrar no Painel"}
             </Button>
-            
+            {/* Separador */}
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-slate-200" />
@@ -101,7 +109,7 @@ export default function AdminLoginPage() {
                 <span className="bg-white px-2 text-muted-foreground">Ou</span>
               </div>
             </div>
-
+            {/* Botão  retornar login profissional */}
             <Button 
               variant="outline" 
               className="w-full h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50" 
