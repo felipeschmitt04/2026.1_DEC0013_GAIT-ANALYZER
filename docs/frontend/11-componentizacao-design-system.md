@@ -1,3 +1,5 @@
+# Componentização e design system
+
 Em aplicações web de alto nível, a interface visual não é construída do zero a cada nova página. Para garantir que a ferramenta clínica tenha um visual profissional, padronizado e acessível, adotamos a estratégia de **Componentização** aliada a um forte **Design System**.
 
 Em vez de escrevermos estilos de design soltos e desorganizados, criamos "peças de Lego" visuais que são reaproveitadas em todo o projeto.

@@ -21,6 +21,15 @@ pendentes, processa o vídeo e envia o resultado de volta. O frontend conversa
 com o backend central e usa o Supabase para persistir pacientes, profissionais e
 histórico das análises.
 
+## Arquitetura
+
+![Diagrama de arquitetura do Gait Analyzer](docs/assets/diagrama-arquitetura-sprint3.jpeg)
+
+O diagrama resume o fluxo principal: o profissional grava o vídeo, o frontend no
+Azure Web App envia o upload para a API FastAPI na VM Azure, a fila organiza os
+jobs e a DGX H100 executa o processamento pesado. O backend devolve o contrato
+JSON para o frontend, que exibe gráficos, visualização 3D e relatório.
+
 ## Tecnologias
 
 | Área | Tecnologias |
@@ -132,6 +141,8 @@ O PDF inclui identificação do job, resumo do vídeo, métricas clínicas, grá
 comparativos entre lados direito e esquerdo e observações técnicas. O arquivo é
 salvo em `backend/storage/results/{job_id}/relatorio_analise_marcha.pdf` e não
 deve ser versionado.
+
+Exemplo gerado pelo backend: [relatorio-analise-marcha-exemplo.pdf](docs/assets/relatorio-analise-marcha-exemplo.pdf).
 
 ## Deploy
 

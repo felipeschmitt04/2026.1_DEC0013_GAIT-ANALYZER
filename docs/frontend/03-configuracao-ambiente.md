@@ -1,3 +1,5 @@
+# Configuração do ambiente
+
 Antes de rodar o frontend, a máquina de desenvolvimento precisa estar preparada com as ferramentas adequadas. Esta seção centraliza os pré-requisitos e a preparação do ambiente de trabalho.
 
 ## 1. Pré-requisitos do Sistema
@@ -16,3 +18,4 @@ Na raiz do projeto, crie um arquivo chamado `.env` (copiando como base o `.env.e
 
 ```env
 DATABASE_URL="postgresql://postgres:[SENHA_DO_BANCO]@db.[ID_DO_SUPABASE].supabase.co:5432/postgres"
+```

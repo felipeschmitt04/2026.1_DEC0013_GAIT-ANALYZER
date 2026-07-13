@@ -1,3 +1,5 @@
+# Estado global
+
 Em aplicações web tradicionais, quando o usuário muda de página, o navegador limpa a memória antiga para carregar o novo conteúdo. No nosso projeto, isso gerava um problema de usabilidade: se o fisioterapeuta selecionasse um paciente e clicasse na aba de "Relatórios", "Gráficos" ou "Visualização 3D", o sistema "esquecia" o que estava acontecendo.
 
 Para resolver isso e criar o "cérebro" de navegação do site, implementamos um gerenciamento de estado global utilizando a **React Context API** através do arquivo `PacienteContext.tsx`.

@@ -35,12 +35,3 @@ arquitetura mude sem necessidade.
   autenticacao simples via `X-Worker-Token`.
 - `engine_dgx/pull_worker.py` faz polling, baixa o vídeo, chama a engine local da
   DGX e envia `raw_result`/artefatos para a API central.
-
-## Proximas Conversas
-
-- Persistencia mais forte com banco ou Redis pode entrar depois, se a fila por
-  arquivos deixar de ser suficiente.
-- Métricas operacionais, painel administrativo e cancelamento de job são úteis,
-  mas não são obrigatórios para a apresentação atual.
-- Otimizacoes profundas de JAX/XLA, batch, warmup persistente e profiling na DGX
-  devem ser discutidas depois de medir o fluxo real com o worker pull-based.

@@ -1,3 +1,5 @@
+# Visão geral
+
 O Frontend do Gait Analyzer é a parte visual e o gerenciador de dados do projeto de análise de marcha. Enquanto o backend foca na matemática pesada e na inteligência artificial, o frontend cuida de tudo o que o usuário vê, interage e de como as informações ficam salvas para o futuro.
 
 A nossa interface web foi feita para ser leve, fácil de usar e totalmente separada das complexidades do supercomputador (a máquina DGX da UFSC).

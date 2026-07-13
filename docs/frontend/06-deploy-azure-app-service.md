@@ -1,3 +1,5 @@
+# Deploy no Azure App Service
+
 Depois de programar o site, organizar o banco de dados e empacotar tudo no Docker, o passo final é colocar a aplicação no ar para que qualquer fisioterapeuta possa acessá-la de qualquer lugar do mundo através da internet. Para isso, adotamos uma estratégia de nuvem moderna utilizando o **Azure App Service**.
 
 ## A Estratégia de PaaS (Plataforma como Serviço)

@@ -1,3 +1,5 @@
+# Docker
+
 No desenvolvimento de software moderno, não enviamos mais arquivos "soltos" para o servidor correndo o risco de as versões instaladas lá serem incompatíveis com as do nosso computador. Para resolver isso, utilizamos o **Docker** para criar um "contêiner". 
 
 O contêiner é uma caixa isolada que empacota o nosso código do Next.js junto com tudo o que ele precisa para rodar perfeitamente, garantindo que o sistema funcione de forma idêntica tanto na máquina local quanto na nuvem.

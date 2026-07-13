@@ -1,3 +1,5 @@
+# Segurança e CORS
+
 Trabalhar com dados de saúde exige um nível rigoroso de privacidade. Por isso, a última camada da nossa arquitetura de frontend foi desenhada para atuar como um escudo, blindando tanto o acesso ao nosso banco de dados quanto a comunicação com o servidor de Inteligência Artificial.
 
 ## Proteção de Credenciais (A Blindagem do Supabase)

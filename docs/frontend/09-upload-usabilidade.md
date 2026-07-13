@@ -1,3 +1,5 @@
+# Upload e usabilidade
+
 Um dos maiores desafios no desenvolvimento de interfaces clínicas é garantir que a ferramenta seja intuitiva, rápida e à prova de erros. A nossa tela de **Nova Análise** foi projetada pensando estritamente na experiência do usuário (UX), removendo atritos técnicos para o profissional de saúde.
 
 ## Upload Inteligente

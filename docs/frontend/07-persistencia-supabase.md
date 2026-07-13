@@ -1,3 +1,5 @@
+# Persistência com Supabase
+
 Diferente de sistemas tradicionais onde o banco de dados fica escondido exclusivamente atrás do backend, o nosso projeto adotou uma estratégia inteligente: a persistência histórica e o gerenciamento dos dados clínicos ficaram sob a responsabilidade direta do **Frontend**. Como o servidor de IA foi desenhado estritamente para processar os vídeos, o frontend assume o papel de organizar, salvar e disponibilizar essas informações para o futuro.
 
 Essa comunicação direta e segura com o armazenamento é feita utilizando o **Prisma ORM** conectado ao **Supabase**.
