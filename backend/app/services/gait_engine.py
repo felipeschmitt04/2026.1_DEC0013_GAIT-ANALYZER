@@ -4,18 +4,13 @@ import numpy as np
 import tensorflow as tf
 import logging
 import tensorflow_hub as hub
+from pathlib import Path
 from app.ml.fitting import fit_model
 
 logger = logging.getLogger("Engine")
 
-"""
-    Esse código abaixo serve para que a VRAM não seja alocada
-    toda de uma vez pelos algoritmos e modelos pesados.
-"""
 logger.info("Definindo alocação dinâmica de VRAM")
-# Impede o JAX de pré-alocar toda a memória
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
-# Impede o TensorFlow de alocar tudo
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 os.environ['MUJOCO_GL'] = 'egl'
@@ -31,7 +26,17 @@ from monocular_demos.biomechanics_mjx.monocular_trajectory import KineticsWrappe
 # from monocular_demos.biomechanics_mjx.visualize import render_trajectory
 
 class GaitAnalysisEngine:
+    """Engine local que executa MeTRAbs, GaitTransformer e fitting biomecanico."""
+
     def __init__(_self, window_L: int = 150):
+        """Inicializa modelos e configuracoes da engine local.
+
+        Parametros:
+            window_L: Janela temporal usada pelo GaitTransformer.
+
+        Saida:
+            Nao retorna valor. Carrega modelos pesados na instancia.
+        """
         _self.window_L = window_L
         _self.metrabs_model = None
         _self.transformer_model = None
@@ -40,11 +45,15 @@ class GaitAnalysisEngine:
         _self._setup_gpu()
         _self._load_models()
 
-    """
-        Essa função configura o TensorFlow para usar memória VRAM
-        conforme precisar usando memory growth.
-    """
     def _setup_gpu(_self):
+        """Configura o TensorFlow para crescer o uso de VRAM sob demanda.
+
+        Parametros:
+            Nenhum alem da instancia.
+
+        Saida:
+            Nao retorna valor. Apenas ajusta configuracao de GPU quando disponivel.
+        """
         gpus = tf.config.list_physical_devices("GPU")
         logger.debug("Configurando TensorFlow")
         if gpus:
@@ -57,8 +66,13 @@ class GaitAnalysisEngine:
             logger.warning("Nenhuma GPU detectada")
 
     def _load_models(_self):
-        """
-            Carrega os modelos que serão usados (MeTRAbs e Transformer).
+        """Carrega os modelos principais usados pela analise.
+
+        Parametros:
+            Nenhum alem da instancia.
+
+        Saida:
+            Nao retorna valor. Preenche `metrabs_model` e `transformer_model`.
         """
         logger.debug("Carregando modelos")
         try:
@@ -74,6 +88,14 @@ class GaitAnalysisEngine:
             raise e
 
     def calculate_kinematics(_self, raw_pose3d):
+        """Ajusta o modelo biomecanico e extrai os angulos articulares.
+
+        Parametros:
+            raw_pose3d: Pose 3D original vinda do MeTRAbs, antes da normalizacao final.
+
+        Retorna:
+            Tupla com matriz de angulos e timestamps usados pelo fitting.
+        """
         pose = raw_pose3d.copy()
         pose = pose[:, :, [0,2,1]]
         pose[:, :, 2] *= -1
@@ -93,7 +115,18 @@ class GaitAnalysisEngine:
 
         return ang, dataset[0]
 
-    def process_video(_self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(_self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
+        """Processa um video completo e devolve a saida bruta da engine.
+
+        Parametros:
+            video_path: Caminho do video a analisar.
+            height_mm: Altura do usuario em milimetros.
+            rotated: Indica se cada frame deve ser rotacionado antes da deteccao.
+            output_dir: Pasta opcional para salvar artefatos como `.npz`.
+
+        Retorna:
+            Dicionario com pose 3D, eventos de marcha, cinematicas e artefatos.
+        """
         logger.info("Começando processamento real do vídeo")
 
         vid, n_frames = video_reader(video_path)
@@ -136,18 +169,20 @@ class GaitAnalysisEngine:
 
         angulos_3d, timestamps_jax = _self.calculate_kinematics(pose3d_ordenado)
 
-        # Renderiza o vídeo final
-        exit_file = '3d_rebuild.mp4'
-        #render_trajectory(angulos_3d, exit_file, xml_path=None)
-        np.savez('movimento_exportado.npz', angulos=angulos_3d, timestamps=timestamps_jax)
+        artifact_dir = Path(output_dir) if output_dir is not None else Path(video_path).parent
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        movement_npz = artifact_dir / 'movimento_exportado.npz'
+        np.savez(movement_npz, angulos=angulos_3d, timestamps=timestamps_jax)
 
         return {
             "status": "sucesso",
-            "video_3d": exit_file,
             "pose3d": keypoints.tolist(),
             "events": state.tolist(),
             "kinematics": {
                 "angles": angulos_3d.tolist(),
                 "timestamps": timestamps_jax.tolist()
-            }
+            },
+            "artifacts": {
+                "movement_npz": str(movement_npz),
+            },
         }

@@ -4,6 +4,14 @@ import monocular_demos.biomechanics_mjx.visualize as visualize
 
 
 def print_source(name: str) -> None:
+    """Imprime o codigo-fonte de um simbolo do modulo `visualize`.
+
+    Parametros:
+        name: Nome da funcao/objeto publico a procurar.
+
+    Saida:
+        Nao retorna valor. Escreve o resultado no terminal.
+    """
     value = getattr(visualize, name, None)
     print(f"\n### {name}")
     if value is None:
@@ -17,6 +25,14 @@ def print_source(name: str) -> None:
 
 
 def main() -> None:
+    """Lista simbolos publicos de `visualize` e imprime os relacionados a render.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Ajuda a entender como o render oficial funciona.
+    """
     print("visualize module:", visualize.__file__)
     names = sorted(name for name in dir(visualize) if not name.startswith("_"))
     print("public names:", names)

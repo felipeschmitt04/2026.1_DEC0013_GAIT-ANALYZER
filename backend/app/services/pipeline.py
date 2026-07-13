@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from app.core.engine import get_engine
@@ -15,7 +16,29 @@ from app.services.video_metadata import get_metadata
 logger = logging.getLogger("Pipeline")
 
 
-def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rotated: bool = False):
+def run_pipeline(
+    video_path,
+    height_mm,
+    window_L,
+    engine=None,
+    job_id=None,
+    rotated: bool = False,
+    output_dir: str | Path | None = None,
+):
+    """Executa o fluxo completo de analise quando a API processa local/remotamente.
+
+    Parametros:
+        video_path: Caminho do video salvo no backend.
+        height_mm: Altura do usuario em milimetros.
+        window_L: Tamanho da janela temporal usada pela inferencia de marcha.
+        engine: Engine opcional para testes; quando omitida, vem de `get_engine()`.
+        job_id: Identificador opcional ja criado pela rota.
+        rotated: Indica se o video precisa ser rotacionado antes da inferencia.
+        output_dir: Pasta onde a engine pode salvar artefatos.
+
+    Retorna:
+        `ResultV1` completo em sucesso ou com `error` preenchido em falha.
+    """
     logger.info("Iniciando pipeline")
     logger.debug("Criando job")
 
@@ -30,6 +53,15 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
     )
 
     def finish_job(status: str, stage: str | None = None) -> None:
+        """Fecha o job interno do pipeline com horario final e duracao.
+
+        Parametros:
+            status: Status final a registrar.
+            stage: Etapa final opcional; quando omitida, mantem a etapa atual.
+
+        Saida:
+            Nao retorna valor. Atualiza o objeto `job` do escopo externo.
+        """
         job.status = status
         if stage is not None:
             job.stage = stage
@@ -37,15 +69,17 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
         job.duration_ms = int((job.finished_at - job.started_at).total_seconds() * 1000)
 
     logger.debug("Job criado, entrando no try")
+    input_summary = None
+    quality_info = None
 
     try:
         logger.info("Extraindo metadados")
 
-        video_data = get_metadata(video_path)  # Extrai todos os metadados dos vídeos
+        video_data = get_metadata(video_path)
 
         logger.info("Metadados extraídos, instanciando classes")
 
-        input_summary = InputSummary(  # Com base nos metadados, preenche o InputSummary
+        input_summary = InputSummary(
             video_path=video_path,
             height_mm=height_mm,
             window_L=window_L,
@@ -56,7 +90,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
 
         logger.debug("InputSummary foi")
 
-        quality_info = QualityInfo(  # Aqui, com base nos metadados também, são preenchidos os dados da qualidade dos frames
+        quality_info = QualityInfo(
             frames_total=video_data["frame_count"],
             frames_without_detection=0,
             warnings=video_data["warnings"],
@@ -73,13 +107,15 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
             if engine is None:
                 engine = get_engine()
 
-            raw_data = (
-                engine.process_video(  # Aqui chama a função que vai processar o vídeo
-                    video_path=video_path,
-                    height_mm=height_mm,
-                    rotated=rotated,
-                )
-            )
+            process_kwargs = {
+                "video_path": video_path,
+                "height_mm": height_mm,
+                "rotated": rotated,
+            }
+            if output_dir is not None:
+                process_kwargs["output_dir"] = output_dir
+
+            raw_data = engine.process_video(**process_kwargs)
 
             logger.info("Vídeo processado com sucesso")
 
@@ -102,6 +138,7 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
                 fitting=build_fitting_payload(raw_data["kinematics"]),
                 model3d=raw_data.get("model3d"),
                 metricas_clinicas=calculate_clinical_metrics(raw_data["pose3d"]),
+                artifacts=raw_data.get("artifacts"),
                 video_3d=None,
             )
 
@@ -147,3 +184,24 @@ def run_pipeline(video_path, height_mm, window_L, engine=None, job_id=None, rota
         finish_job(status="failed", stage="ingest")
 
         return ResultV1(result_version="1.0", job=job, error=error_info)
+
+    except Exception as e:
+        logger.exception("Falha inesperada no pipeline")
+
+        error_info = ErrorInfo(
+            code="ERROR_PIPELINE_FAILED",
+            message="Falha inesperada durante o processamento do video",
+            stage=job.stage,
+            retryable=True,
+            details=f"{type(e).__name__}: {e}",
+        )
+
+        finish_job(status="failed", stage=job.stage)
+
+        return ResultV1(
+            result_version="1.0",
+            job=job,
+            error=error_info,
+            input_summary=input_summary,
+            quality_info=quality_info,
+        )

@@ -10,6 +10,14 @@ from tqdm import trange
 
 
 def clear_jit_caches() -> None:
+    """Limpa caches JIT da DGX antes/depois do fitting.
+
+    Parametros:
+        Nenhum.
+
+    Saida:
+        Nao retorna valor. Ajuda a evitar acumulo de memoria entre jobs.
+    """
     eqx.clear_caches()
     jax.clear_caches()
 
@@ -20,6 +28,17 @@ def loss(
     y: Float[Array, "times keypoints 3"],
     site_offset_regularization=1e-1,
 ) -> Tuple[Float, Dict]:
+    """Calcula o erro entre o modelo MuJoCo e os keypoints 3D observados.
+
+    Parametros:
+        model: Modelo biomecanico ajustavel.
+        x: Timestamps dos frames.
+        y: Keypoints 3D alvo.
+        site_offset_regularization: Peso da regularizacao dos offsets.
+
+    Retorna:
+        Valor da loss e metricas auxiliares para acompanhar o fitting.
+    """
     timestamps = x
     keypoints3d = y
     metrics = {}
@@ -49,6 +68,19 @@ def loss(
 
 @eqx.filter_jit
 def step(model, opt_state, data, loss_grad, optimizer, **kwargs):
+    """Executa uma iteracao otimizada/JIT do fitting na DGX.
+
+    Parametros:
+        model: Modelo atual.
+        opt_state: Estado do otimizador.
+        data: Tupla `(timestamps, keypoints3d)`.
+        loss_grad: Funcao que calcula loss e gradientes.
+        optimizer: Otimizador Optax.
+        **kwargs: Parametros extras da loss.
+
+    Retorna:
+        Loss, modelo atualizado, estado atualizado do otimizador e metricas.
+    """
     x, targets = data
     (val, metrics), grads = loss_grad(model, x=x, y=targets, **kwargs)
     params = eqx.filter(model, eqx.is_inexact_array)
@@ -65,6 +97,19 @@ def fit_model(
     max_iters: int = 5000,
     clip_by_global_norm: float = 0.1,
 ):
+    """Ajusta o modelo biomecanico completo aos keypoints detectados.
+
+    Parametros:
+        model: Wrapper inicial do modelo.
+        dataset: Timestamps e keypoints 3D normalizados.
+        lr_end_value: Taxa de aprendizado final.
+        lr_init_value: Taxa de aprendizado inicial.
+        max_iters: Quantidade de iteracoes.
+        clip_by_global_norm: Limite de norma para estabilizar os gradientes.
+
+    Retorna:
+        Modelo ajustado e metricas finais.
+    """
     clear_jit_caches()
 
     transition_steps = 10

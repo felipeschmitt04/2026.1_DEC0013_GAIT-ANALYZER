@@ -104,19 +104,36 @@ docker run --rm gait-analyzer-backend:cpu python -m pytest tests
 
 ## Testes Existentes
 
-Atualmente há testes reais para métricas clínicas:
+A suite leve cobre atualmente:
+
+- metricas clinicas deterministicas;
+- `GET /health`;
+- fluxo mockado de `POST /analyze`, incluindo persistencia de `result.json`;
+- recuperacao por `GET /results/{job_id}`;
+- validacao de `height_mm`;
+- limite de tamanho de upload;
+- contrato estrutural do `MockGaitAnalysisEngine`;
+- `get_metadata` com arquivo inexistente;
+- erro estruturado do pipeline quando a engine falha;
+- cliente `RemoteDgxEngine`, incluindo download de artefatos permitidos;
+- script de limpeza de storage em modo seguro.
+
+Para rodar tudo:
 
 ```bash
-python -m pytest tests/test_clinical_metrics.py
+cd backend
+python -m pytest tests
 ```
 
-Arquivos de teste vazios ou placeholders devem ser preenchidos aos poucos com:
+## CI No GitHub Actions
 
-- `/health`;
-- `get_metadata` com arquivo inexistente;
-- contrato do mock engine;
-- fluxo mock de `/analyze`;
-- validação de `height_mm`.
+CI significa integracao continua. Neste repositorio, isso quer dizer que o GitHub roda automaticamente uma checagem leve quando ha push ou pull request para `main`:
+
+```text
+instalar requirements.api.txt -> compileall -> pytest
+```
+
+Isso nao faz deploy. O objetivo e avisar cedo se alguem quebrou import, sintaxe, contrato basico ou testes leves.
 
 ## Boa Prática
 

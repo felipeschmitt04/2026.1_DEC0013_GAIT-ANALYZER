@@ -7,9 +7,28 @@ class MockGaitAnalysisEngine:
     """Engine leve para testar contrato da API sem modelos de IA."""
 
     def __init__(self, window_L: int = 150):
+        """Configura a engine falsa com a mesma janela da engine real.
+
+        Parametros:
+            window_L: Tamanho de janela temporal mantido para compatibilidade.
+
+        Saida:
+            Nao retorna valor. Guarda a configuracao na instancia.
+        """
         self.window_L = window_L
 
-    def process_video(self, video_path: str, height_mm: int, rotated: bool = False):
+    def process_video(self, video_path: str, height_mm: int, rotated: bool = False, output_dir=None):
+        """Gera uma analise sintetica, previsivel e rapida.
+
+        Parametros:
+            video_path: Caminho recebido pela API, mantido apenas para compatibilidade.
+            height_mm: Altura informada, tambem mantida para o mesmo contrato.
+            rotated: Flag de rotacao, sem efeito no mock.
+            output_dir: Pasta de artefatos, sem uso no mock atual.
+
+        Retorna:
+            Dicionario no mesmo formato bruto esperado pelo pipeline real.
+        """
         frame_count = 30
         pose3d = []
 
@@ -48,6 +67,7 @@ class MockGaitAnalysisEngine:
             frame_angles = [0.0] * len(coordinate_names)
 
             def set_angle(name: str, value: float) -> None:
+                """Preenche um grau de liberdade pelo nome humano do fitting."""
                 frame_angles[coordinate_names.index(name)] = value
 
             set_angle("pelvis_ty", 0.92)

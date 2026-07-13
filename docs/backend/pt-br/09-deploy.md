@@ -8,8 +8,8 @@ já criado. A criação da VM Azure fica fora deste guia.
 O deploy recomendado é:
 
 ```text
-Azure CPU -> Backend FastAPI em Docker CPU/mock ou remote
-DGX UFSC  -> Worker engine_dgx rodando por conda
+Azure CPU -> Backend FastAPI em Docker CPU/mock ou queue
+DGX UFSC  -> Pull worker engine_dgx rodando por conda
 Frontend  -> Consome somente a API da Azure
 ```
 
@@ -53,9 +53,9 @@ docker run --rm -d \
 Esse modo é suficiente para o frontend desenvolver telas, upload, consumo do
 JSON, gráficos e visualização de esqueleto.
 
-## Subir Apontando Para DGX
+## Subir Em Modo Fila Para DGX Pull-Based
 
-Quando o worker DGX estiver online e acessível:
+Este e o modo recomendado quando a DGX consegue acessar a API central:
 
 ```bash
 docker stop gait-analyzer-api || true
@@ -63,14 +63,17 @@ docker stop gait-analyzer-api || true
 docker run --rm -d \
   --name gait-analyzer-api \
   -p 8000:8000 \
-  -e ENGINE_MODE=remote \
-  -e REMOTE_ENGINE_URL=http://URL-DO-WORKER-DGX:9000 \
-  -e REMOTE_ENGINE_TIMEOUT_S=3600 \
+  -e ENGINE_MODE=queue \
+  -e WORKER_TOKEN=um-token-forte \
+  -e WORKER_CLAIM_TTL_S=900 \
   gait-analyzer-backend:cpu
 ```
 
-Evite registrar URL temporária real em arquivo versionado. Use variável de
-ambiente, secret do provedor, ou comando local.
+Na DGX, rode `engine_dgx/pull_worker.py` com `BACKEND_URL` apontando para a API
+central e o mesmo `WORKER_TOKEN`.
+
+Evite registrar URL temporaria real ou token em arquivo versionado. Use variavel
+de ambiente, secret do provedor, ou comando local.
 
 ## Smoke Test Pós-Deploy
 

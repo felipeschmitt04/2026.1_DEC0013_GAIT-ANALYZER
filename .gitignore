@@ -38,6 +38,8 @@ logs/
 
 # Notebooks and exploratory files
 *.ipynb
+handoff_frontend_resultado/
+relatorio_doc/
 
 # Generated media and ML artifacts
 *.mp4
@@ -54,7 +56,9 @@ logs/
 # Runtime storage
 backend/storage/uploads/*
 backend/storage/results/*
+backend/storage/jobs/*
 backend/storage/temp/*
 !backend/storage/uploads/.gitkeep
 !backend/storage/results/.gitkeep
+!backend/storage/jobs/.gitkeep
 !backend/storage/temp/.gitkeep
