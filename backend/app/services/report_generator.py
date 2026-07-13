@@ -5,6 +5,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from xml.sax.saxutils import escape
 
 
 REPORT_FILENAME = "relatorio_analise_marcha.pdf"
@@ -55,6 +56,24 @@ def _format_number(value: Any, suffix: str = "", decimals: int = 2) -> str:
     if abs(number - round(number)) < 1e-9:
         return f"{int(round(number))}{suffix}"
     return f"{number:.{decimals}f}{suffix}"
+
+
+def _soft_break_identifier(value: Any, chunk_size: int = 18) -> str:
+    """Insere quebras seguras em identificadores longos.
+
+    Parametros:
+        value: Texto que pode ser grande demais para uma celula de tabela.
+        chunk_size: Tamanho aproximado de cada linha.
+
+    Retorna:
+        Texto com `<br/>` para o ReportLab quebrar sem invadir outras colunas.
+    """
+    text = str(value or "-")
+    if len(text) <= chunk_size:
+        return text
+
+    chunks = [text[index : index + chunk_size] for index in range(0, len(text), chunk_size)]
+    return "<br/>".join(chunks)
 
 
 def _as_float_series(values: Any) -> list[float]:
@@ -393,7 +412,7 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
     """
     try:
         from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.enums import TA_LEFT
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
@@ -423,61 +442,114 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
     title_style = ParagraphStyle(
         "GaitTitle",
         parent=styles["Title"],
-        alignment=TA_CENTER,
-        fontSize=18,
-        leading=22,
-        spaceAfter=12,
-        textColor=colors.HexColor("#1F2937"),
+        alignment=TA_LEFT,
+        fontSize=19,
+        leading=23,
+        spaceAfter=2,
+        textColor=colors.white,
+    )
+    subtitle_style = ParagraphStyle(
+        "GaitSubtitle",
+        parent=styles["BodyText"],
+        alignment=TA_LEFT,
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#D1FAE5"),
     )
     section_style = ParagraphStyle(
         "GaitSection",
         parent=styles["Heading2"],
-        fontSize=12,
-        leading=15,
-        spaceBefore=12,
-        spaceAfter=6,
-        textColor=colors.HexColor("#111827"),
+        fontSize=11,
+        leading=14,
+        spaceBefore=11,
+        spaceAfter=5,
+        textColor=colors.HexColor("#0F172A"),
     )
     body_style = ParagraphStyle(
         "GaitBody",
         parent=styles["BodyText"],
-        fontSize=9,
-        leading=12,
+        fontSize=8.8,
+        leading=11.5,
         textColor=colors.HexColor("#374151"),
+        wordWrap="CJK",
     )
 
     doc = SimpleDocTemplate(
         str(output_path),
         pagesize=A4,
-        rightMargin=1.4 * cm,
-        leftMargin=1.4 * cm,
-        topMargin=1.3 * cm,
-        bottomMargin=1.3 * cm,
+        rightMargin=1.25 * cm,
+        leftMargin=1.25 * cm,
+        topMargin=1.15 * cm,
+        bottomMargin=1.35 * cm,
         title="Relatorio de Analise de Marcha",
     )
+    content_width = A4[0] - doc.leftMargin - doc.rightMargin
+    header = Table(
+        [
+            [
+                Paragraph("Relatorio de Analise de Marcha", title_style),
+            ],
+            [
+                Paragraph(
+                    "Gait Analyzer - resumo quantitativo de metricas biomecanicas, "
+                    "graficos comparativos e indicadores de qualidade.",
+                    subtitle_style,
+                ),
+            ],
+        ],
+        colWidths=[content_width],
+        hAlign="LEFT",
+    )
+    header.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F766E")),
+            ("BOX", (0, 0), (-1, -1), 0.25, colors.HexColor("#0F766E")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 12),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+            ("TOPPADDING", (0, 0), (0, 0), 12),
+            ("BOTTOMPADDING", (0, 0), (0, 0), 1),
+            ("TOPPADDING", (0, 1), (0, 1), 0),
+            ("BOTTOMPADDING", (0, 1), (0, 1), 12),
+        ])
+    )
     story = [
-        Paragraph("Relatorio de Analise de Marcha", title_style),
-        Paragraph(
-            "Resumo quantitativo gerado automaticamente a partir das metricas biomecanicas "
-            "extraidas do video analisado.",
-            body_style,
-        ),
-        Spacer(1, 0.25 * cm),
+        header,
+        Spacer(1, 0.32 * cm),
     ]
 
     summary_rows = [
         ["Campo", "Valor", "Campo", "Valor"],
-        ["Job", job.get("job_id", "-"), "Status", job.get("status", "-")],
-        ["Criado em", _format_datetime(job.get("created_at")), "Finalizado em", _format_datetime(job.get("finished_at"))],
-        ["Altura", _format_number(input_summary.get("height_mm"), " mm"), "FPS", _format_number(input_summary.get("fps"), "")],
-        ["Duracao", _format_number(input_summary.get("duration_ms"), " ms"), "Frames", _format_number(quality_info.get("frames_total"), "")],
-        ["Frames sem deteccao", _format_number(quality_info.get("frames_without_detection"), ""), "Rotacionado", str(input_summary.get("rotated", "-"))],
+        ["Job", _soft_break_identifier(job.get("job_id", "-")), "Status", job.get("status", "-")],
+        [
+            "Criado em",
+            _format_datetime(job.get("created_at")),
+            "Finalizado em",
+            _format_datetime(job.get("finished_at")),
+        ],
+        [
+            "Altura",
+            _format_number(input_summary.get("height_mm"), " mm"),
+            "FPS",
+            _format_number(input_summary.get("fps"), ""),
+        ],
+        [
+            "Duracao",
+            _format_number(input_summary.get("duration_ms"), " ms"),
+            "Frames",
+            _format_number(quality_info.get("frames_total"), ""),
+        ],
+        [
+            "Frames sem deteccao",
+            _format_number(quality_info.get("frames_without_detection"), ""),
+            "Rotacionado",
+            str(input_summary.get("rotated", "-")),
+        ],
     ]
     story.append(Paragraph("Resumo da analise", section_style))
-    story.append(_styled_table(summary_rows, col_widths=[3.1 * cm, 5.0 * cm, 3.1 * cm, 5.0 * cm]))
+    story.append(_styled_table(summary_rows, col_widths=[3.4 * cm, 6.0 * cm, 3.2 * cm, 4.8 * cm]))
 
     story.append(Paragraph("Metricas clinicas comparativas", section_style))
-    story.append(_styled_table(_metric_summary_rows(metrics), col_widths=[6.0 * cm, 2.6 * cm, 2.6 * cm, 2.6 * cm, 2.6 * cm]))
+    story.append(_styled_table(_metric_summary_rows(metrics), col_widths=[6.2 * cm, 2.75 * cm, 2.75 * cm, 2.75 * cm, 2.95 * cm]))
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -532,9 +604,38 @@ def generate_gait_report_pdf(result_payload: dict[str, Any], output_path: Path) 
             warning_text = "Nenhum aviso de qualidade registrado."
         story.append(Paragraph(warning_text, body_style))
 
-        doc.build(story)
+        doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
 
     return output_path
+
+
+def _draw_footer(canvas, doc) -> None:
+    """Desenha rodape discreto com paginacao e aviso clinico.
+
+    Parametros:
+        canvas: Canvas ReportLab da pagina atual.
+        doc: Documento em construcao.
+
+    Saida:
+        Nao retorna valor. Escreve diretamente no canvas.
+    """
+    from reportlab.lib import colors
+
+    canvas.saveState()
+    page_width, _page_height = doc.pagesize
+    y = 0.78 * 28.3464567
+    canvas.setStrokeColor(colors.HexColor("#CBD5E1"))
+    canvas.setLineWidth(0.35)
+    canvas.line(doc.leftMargin, y + 10, page_width - doc.rightMargin, y + 10)
+    canvas.setFillColor(colors.HexColor("#64748B"))
+    canvas.setFont("Helvetica", 7.5)
+    canvas.drawString(
+        doc.leftMargin,
+        y,
+        "Relatorio gerado automaticamente - interpretar como apoio quantitativo.",
+    )
+    canvas.drawRightString(page_width - doc.rightMargin, y, f"Pagina {doc.page}")
+    canvas.restoreState()
 
 
 def _styled_table(rows: list[list[Any]], col_widths: list[float]) -> Any:
@@ -548,26 +649,68 @@ def _styled_table(rows: list[list[Any]], col_widths: list[float]) -> Any:
         Instancia de `Table` estilizada.
     """
     from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT
+    from reportlab.lib.styles import ParagraphStyle
     from reportlab.platypus import Table, TableStyle
 
-    table = Table(rows, colWidths=col_widths, hAlign="LEFT", repeatRows=1)
+    header_style = ParagraphStyle(
+        "TableHeader",
+        fontName="Helvetica-Bold",
+        fontSize=8.2,
+        leading=10,
+        textColor=colors.HexColor("#0F172A"),
+        alignment=TA_LEFT,
+        wordWrap="CJK",
+    )
+    cell_style = ParagraphStyle(
+        "TableCell",
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#111827"),
+        alignment=TA_LEFT,
+        wordWrap="CJK",
+    )
+    normalized_rows = []
+    for row_index, row in enumerate(rows):
+        style = header_style if row_index == 0 else cell_style
+        normalized_rows.append([_table_cell(value, style) for value in row])
+
+    table = Table(normalized_rows, colWidths=col_widths, hAlign="LEFT", repeatRows=1)
     table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DDEFEA")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#111827")),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("LEADING", (0, 0), (-1, -1), 10),
-                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D1D5DB")),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#CBD5E1")),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9FAFB")]),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ]
         )
     )
     return table
+
+
+def _table_cell(value: Any, style: Any) -> Any:
+    """Converte valores de tabela em Paragraph com quebra segura.
+
+    Parametros:
+        value: Valor original da celula.
+        style: Estilo ReportLab usado no paragrafo.
+
+    Retorna:
+        `Paragraph` pronto para caber dentro da celula.
+    """
+    from reportlab.platypus import Paragraph
+
+    text = str(value if value is not None else "-")
+    text = escape(text).replace("&lt;br/&gt;", "<br/>").replace("\n", "<br/>")
+    return Paragraph(text, style)
