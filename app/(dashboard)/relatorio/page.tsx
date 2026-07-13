@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ProtecaoPaciente } from "@/components/ProtecaoPaciente";
 import { usePaciente } from "@/app/PacienteContext";
@@ -22,6 +22,7 @@ export default function RelatoriosPage() {
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [selecionadaLocal, setSelecionadaLocal] = useState<Analise | null>(null);
   const [loading, setLoading] = useState(true);
+  const [baixandoRelatorioId, setBaixandoRelatorioId] = useState<string | null>(null);
   // Busca o histórico de análises pertencentes ao paciente selecionado
   useEffect(() => {
     if (!pacienteAtivo?.id) return;
@@ -72,10 +73,48 @@ export default function RelatoriosPage() {
     // Encaminha para a rota de visualização injetando o id correto na URL para o Three.js buscar os dados
     router.push(`/visualizacao?jobId=${selecionadaLocal.id}`);
   };
-  // gerar pdf
-  const handleGerarPDF = () => {
-    if (!selecionadaLocal) return;
-    alert(`Gerando relatório em PDF para: ${selecionadaLocal.nome}`);
+  // Baixa o PDF clínico gerado pelo backend para a análise escolhida.
+  const handleBaixarRelatorio = async (analise: Analise, event?: MouseEvent) => {
+    event?.stopPropagation();
+    if (baixandoRelatorioId) return;
+
+    try {
+      setBaixandoRelatorioId(analise.id);
+      const response = await fetch(`/api/analises/relatorio?jobId=${encodeURIComponent(analise.id)}`);
+
+      if (!response.ok) {
+        let message = "Não foi possível baixar o relatório desta análise.";
+        try {
+          const payload = await response.json();
+          message = payload.message || message;
+        } catch {
+          // Mantém a mensagem padrão quando a resposta não vem em JSON.
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const nomeSeguro = analise.nome
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9-_]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+
+      link.href = url;
+      link.download = `relatorio-${nomeSeguro || analise.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar relatório:", error);
+      alert(error instanceof Error ? error.message : "Erro ao baixar relatório.");
+    } finally {
+      setBaixandoRelatorioId(null);
+    }
   };
 
   return (
@@ -134,6 +173,20 @@ export default function RelatoriosPage() {
                       {formatarDataBR(analise.data)}
                     </div>
                   </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={Boolean(baixandoRelatorioId)}
+                    onClick={(event) => handleBaixarRelatorio(analise, event)}
+                    className={cn(
+                      "mt-auto h-10 rounded-xl border-slate-200 bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 gap-2",
+                      selecionadaLocal?.id === analise.id && "border-emerald-200 text-emerald-700"
+                    )}
+                  >
+                    <FileDown size={16} />
+                    {baixandoRelatorioId === analise.id ? "Baixando..." : "Baixar PDF"}
+                  </Button>
                 </div>
               ))
             ) : (
@@ -158,12 +211,14 @@ export default function RelatoriosPage() {
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             {/* botão gerar pdf */}
             <Button
-            // gerar pdf
-              onClick={handleGerarPDF}
+            // Baixa o relatório clínico em PDF da análise selecionada
+              onClick={() => selecionadaLocal && handleBaixarRelatorio(selecionadaLocal)}
+              disabled={!selecionadaLocal || Boolean(baixandoRelatorioId)}
               variant="outline"
               className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white rounded-2xl h-12 px-6 gap-2 w-full sm:w-auto text-white"
             >
-              <FileDown size={18} /> Emitir em PDF
+              <FileDown size={18} />
+              {baixandoRelatorioId === selecionadaLocal?.id ? "Baixando PDF..." : "Emitir em PDF"}
             </Button>
             {/* botão selecionar marcha */}
             <Button
