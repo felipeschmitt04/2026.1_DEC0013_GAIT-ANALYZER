@@ -3,13 +3,14 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, health
-from app.core.config import ensure_storage_dirs, get_settings
+from app.api.routes import analysis, health, worker
+from app.core.config import ensure_storage_dirs, get_settings, validate_runtime_settings
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("API")
 settings = get_settings()
+validate_runtime_settings(settings)
 ensure_storage_dirs()
 
 app = FastAPI(title="Gait Analysis API")
@@ -24,3 +25,4 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(analysis.router)
+app.include_router(worker.router)

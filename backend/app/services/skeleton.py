@@ -39,6 +39,14 @@ POSE3D_CONNECTIONS = [
 
 
 def get_pose3d_skeleton_info() -> dict:
+    """Descreve o esqueleto 3D usado no contrato do resultado.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Nome dos pontos, conexoes, junta raiz, unidade e sistema de coordenadas.
+    """
     return {
         "name": "mpi_inf_3dhp_17_normalized",
         "joint_names": POSE3D_JOINT_NAMES,

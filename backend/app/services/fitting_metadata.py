@@ -326,10 +326,26 @@ FITTING_COORDINATES = [
 
 
 def get_fitting_coordinate_names() -> list[str]:
+    """Lista os nomes dos graus de liberdade do modelo de fitting.
+
+    Parametros:
+        Nenhum.
+
+    Retorna:
+        Lista na mesma ordem usada em `kinematics["angles"][frame][index]`.
+    """
     return [coordinate["name"] for coordinate in FITTING_COORDINATES]
 
 
 def build_fitting_payload(kinematics: dict) -> dict:
+    """Monta o bloco `fitting` enviado no resultado para o frontend.
+
+    Parametros:
+        kinematics: Dicionario com `angles` e `timestamps` gerados pela engine.
+
+    Retorna:
+        Metadados do modelo, coordenadas, series de angulos e notas de interpretacao.
+    """
     return {
         "model": FITTING_MODEL_NAME,
         "source": FITTING_MODEL_SOURCE,

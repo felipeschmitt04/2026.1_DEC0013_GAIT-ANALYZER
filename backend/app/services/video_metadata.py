@@ -2,6 +2,17 @@ import os
 
 
 def get_metadata(file_path):
+    """Le metadados basicos e valida a qualidade minima de um video.
+
+    Parametros:
+        file_path: Caminho do arquivo de video no disco.
+
+    Retorna:
+        Dicionario com fps, dimensoes, duracao, quantidade de frames e warnings.
+
+    Saida:
+        Levanta `ValueError` com codigos do contrato quando o video nao pode ser usado.
+    """
     if not os.path.isfile(file_path):
         raise ValueError("ERROR_104_PATH")
 

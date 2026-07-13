@@ -2,6 +2,7 @@ fastapi==0.136.0
 uvicorn==0.44.0
 python-multipart==0.0.26
 pydantic==2.13.2
+httpx==0.28.1
 
 # O ambiente conda da DGX ja deve conter as dependencias pesadas abaixo.
 # Este arquivo serve como referencia/documentacao, nao como instalacao obrigatoria.
